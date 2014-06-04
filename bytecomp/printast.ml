@@ -74,6 +74,7 @@ let option i f ppf = function
 
 let rec tp i ppf t =
   line i ppf "type\n";
+  let i = i+1 in
   match t with
   | TInt ->
     line i ppf "TInt\n"
@@ -207,6 +208,11 @@ let rec stmt i ppf s =
   | SExpr e ->
     line i ppf "SExpr\n";
     expr i ppf e
+  | SDef (t, id, e, s) ->
+    line i ppf "SDef %a\n" fmt_string_loc id;
+    tp i ppf t;
+    option i expr ppf e;
+    stmt i ppf s
   | SIf (e, s1, s2) ->
     line i ppf "SIf\n";
     expr i ppf e;

@@ -83,7 +83,7 @@ type stmt =
   | SDef of tp * string loc * expr loc option * stmt
   | SIf of expr loc * stmt * stmt
   | SWhile of expr loc * stmt
-  | SFor of stmt * expr loc * stmt * stmt
+  (* | SFor of stmt * expr loc * stmt * stmt *)
   | SReturn of expr loc option
   | SSeq of stmt * stmt
   | SAssert of expr loc

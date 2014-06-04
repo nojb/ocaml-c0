@@ -21,6 +21,12 @@ let rec lval = function
   | EIndex (e1, e2) -> LIndex (maptxt lval e1, e2)
   | _ -> raise Exit
 
+let seq s1 s2 =
+  match s1, s2 with
+  | SEmpty, _ -> s2
+  | _, SEmpty -> s1
+  | _ -> SSeq (s1, s2)
+
 let for_to_while start cond step body =
   let rec loop s k =
     match s with
@@ -28,11 +34,11 @@ let for_to_while start cond step body =
     | SDef (t, id, e, body) ->
       SDef (t, id, e, loop body k)
     | SSeq (s1, s2) ->
-      SSeq (s1, loop s2 k)
+      seq s1 (loop s2 k)
     | _ ->
-      SSeq (s, k)
+      seq s k
   in
-  loop start (SWhile (cond, SSeq (body, step)))
+  loop start (SWhile (cond, seq body step))
 
 let unclosed opening_name opening_num closing_name closing_num =
   let open Syntaxerr in
@@ -330,18 +336,16 @@ opt_equal_expr:
   ;
 
 block_stmts:
-    stmt
-    { $1 }
+    /* empty */
+    { SEmpty }
   | stmt block_stmts
-    { SSeq ($1, $2) }
+    { seq $1 $2 }
   | tp ident opt_equal_expr semi_or_fail block_stmts
     { SDef ($1, $2, $3, $5) }
   ;
 
 block:
-    LBRACE RBRACE
-    { SEmpty }
-  | LBRACE block_stmts RBRACE
+    LBRACE block_stmts RBRACE
     { $2 }
   | LBRACE block_stmts error
     { unclosed "{" 1 "}" 3 }
@@ -370,6 +374,13 @@ simple_or_defn:
     { SDef ($1, $2, $3, SEmpty) }
   ;
 
+opt_simple:
+    /* nothing */
+    { SEmpty }
+  | simple
+    { $1 }
+  ;
+
 stmt:
     stmtu
     { $1 }
@@ -393,7 +404,7 @@ stmtm:
     { SIf ($2, $3, $5) }
   | WHILE inparen_or_fail(expr) stmtm
     { SWhile ($2, $3) }
-  | FOR LPAREN simple_or_defn SEMI expr SEMI simple RPAREN stmtm
+  | FOR LPAREN simple_or_defn SEMI expr SEMI opt_simple RPAREN stmtm
     { for_to_while $3 $5 $7 $9 }
   | RETURN SEMI
     { SReturn None }
