@@ -133,7 +133,7 @@ let rec expr i ppf e =
   | EInt n ->
     line i ppf "EInt %li\n" n
   | EString s ->
-    line i ppf "EString %s\n" s
+    line i ppf "EString %S\n" s
   | EChar c ->
     line i ppf "EChar %C\n" c
   | EBool b ->
