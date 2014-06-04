@@ -12,13 +12,12 @@ let mkdummyloc d =
   { txt = d;
     loc = dummy }
 
-let maptxt f d =
-  { d with txt = f d.txt }
-
-let rec lval = function
-  | Pexp_ident id -> Pref_ident id
-  | Pexp_field (e, id) -> Pref_field (maptxt lval e, id)
-  | Pexp_index (e1, e2) -> Pref_index (maptxt lval e1, e2)
+let rec lvalue lv op e =
+  match lv with
+  | Pexp_ident id -> Pstm_assign (id, op, e)
+  | Pexp_getfield (e1, id) -> Pstm_setfield (e1, id, op, e)
+  | Pexp_get (e1, e2) -> Pstm_set (e1, e2, op, e)
+  | Pexp_load e1 -> Pstm_store (e1, op, e)
   | _ -> raise Exit
 
 let seq s1 s2 =
@@ -247,15 +246,15 @@ expr:
   | ident inparen_or_fail(expr_list)
     { mkloc (Pexp_call ($1, $2)) }
   | expr DOT ident_or_fail
-    { mkloc (Pexp_field ($1, $3)) }
+    { mkloc (Pexp_getfield ($1, $3)) }
   | expr ARROW ident_or_fail
-    { mkloc (Pexp_field (mkloc (Pexp_deref $1), $3)) }
+    { mkloc (Pexp_getfield (mkloc (Pexp_load $1), $3)) }
   | expr LBRACKET expr RBRACKET
-    { mkloc (Pexp_index ($1, $3)) }
+    { mkloc (Pexp_get ($1, $3)) }
   | expr LBRACKET expr error
     { unclosed "[" 2 "]" 4 }
   | STAR expr %prec prec_unary_op
-    { mkloc (Pexp_deref $2) }
+    { mkloc (Pexp_load $2) }
   | ALLOC inparen_or_fail(tp)
     { mkloc (Pexp_alloc $2) }
   | alloc_array
@@ -301,18 +300,19 @@ inbrackets(X):
     { unclosed "[" 1 "]" 3 }
   ;
 
-lval:
-    expr
-    { try maptxt lval $1 with Exit -> expecting 1 "lvalue" }
-  ;
-
 simple:
-    lv = lval op = asnop e = expr
-    { Pstm_assign (lv, op, e) }
-  | lval PLUSPLUS
-    { Pstm_assign ($1, ArithAssign Add, mkdummyloc (Pexp_const (Const_int 1n))) }
-  | lval MINUSMINUS
-    { Pstm_assign ($1, ArithAssign Sub, mkdummyloc (Pexp_const (Const_int 1n))) }
+    lv = expr op = asnop e = expr
+    { try lvalue lv.txt op e with Exit -> expecting 1 "lvalue" }
+  | expr PLUSPLUS
+    { try
+        lvalue $1.txt (ArithAssign Add) (mkdummyloc (Pexp_const (Const_int 1n)))
+      with
+      | Exit -> expecting 1 "lvalue" }
+  | expr MINUSMINUS
+    { try
+        lvalue $1.txt (ArithAssign Sub) (mkdummyloc (Pexp_const (Const_int 1n)))
+      with
+      | Exit -> expecting 1 "lvalue" }
   | expr
     { Pstm_expr $1 }
   ;

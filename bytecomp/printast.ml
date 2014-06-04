@@ -150,15 +150,15 @@ let rec expr i ppf e =
   | Pexp_call (id, el) ->
     line i ppf "Pexp_call %a\n" fmt_string_loc id;
     list i expr ppf el
-  | Pexp_field (e, id) ->
-    line i ppf "Pexp_field %a\n" fmt_string_loc id;
+  | Pexp_getfield (e, id) ->
+    line i ppf "Pexp_getfield %a\n" fmt_string_loc id;
     expr i ppf e
-  | Pexp_index (e1, e2) ->
-    line i ppf "Pexp_index\n";
+  | Pexp_get (e1, e2) ->
+    line i ppf "Pexp_get\n";
     expr i ppf e1;
     expr i ppf e2
-  | Pexp_deref e ->
-    line i ppf "Pexp_deref\n";
+  | Pexp_load e ->
+    line i ppf "Pexp_load\n";
     expr i ppf e
   | Pexp_alloc t ->
     line i ppf "Pexp_alloc\n";
@@ -167,23 +167,6 @@ let rec expr i ppf e =
     line i ppf "Pexp_allocarray\n";
     tp i ppf t;
     expr i ppf e
-
-and lval i ppf lv =
-  line i ppf "lvalue %a\n" fmt_location lv.loc;
-  let i = i+1 in
-  match lv.txt with
-  | Pref_ident id ->
-    line i ppf "Pref_ident %a\n" fmt_string_loc id
-  | Pref_field (lv, id) ->
-    line i ppf "Pref_field %a\n" fmt_string_loc id;
-    lval i ppf lv
-  | Pref_index (lv, e) ->
-    line i ppf "Pref_index\n";
-    lval i ppf lv;
-    expr i ppf e
-  | Pref_deref lv ->
-    line i ppf "Pref_deref\n";
-    lval i ppf lv
 
 let string_of_asnop = function
   | ArithAssign op ->
@@ -196,10 +179,22 @@ let rec stmt i ppf s =
   match s with
   | Pstm_empty ->
     line i ppf "Pstm_empty\n"
-  | Pstm_assign (lv, op, e) ->
-    line i ppf "Pstm_assign %S\n" (string_of_asnop op);
-    lval i ppf lv;
+  | Pstm_assign (id, op, e) ->
+    line i ppf "Pstm_assign %a %S\n" fmt_string_loc id (string_of_asnop op);
     expr i ppf e
+  | Pstm_setfield (e1, id, op, e2) ->
+    line i ppf "Pstm_setfield %a %S\n" fmt_string_loc id (string_of_asnop op);
+    expr i ppf e1;
+    expr i ppf e2
+  | Pstm_set (e1, e2, op, e3) ->
+    line i ppf "Pstm_set %S\n" (string_of_asnop op);
+    expr i ppf e1;
+    expr i ppf e2;
+    expr i ppf e3
+  | Pstm_store (e1, op, e2) ->
+    line i ppf "Pstm_store %S\n" (string_of_asnop op);
+    expr i ppf e1;
+    expr i ppf e2
   | Pstm_expr e ->
     line i ppf "Pstm_expr\n";
     expr i ppf e
