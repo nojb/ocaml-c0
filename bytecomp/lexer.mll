@@ -60,7 +60,7 @@ let char_for_decimal_code lexbuf i =
     Char.chr c
 
 let cvt_int_literal s =
-  Int32.neg (Int32.of_string ("-" ^ s))
+  Nativeint.neg (Nativeint.of_string ("-" ^ s))
 
 let update_loc lexbuf line chars =
   let pos = lexbuf.lex_curr_p in

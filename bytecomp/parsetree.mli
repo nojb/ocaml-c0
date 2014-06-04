@@ -19,6 +19,8 @@
    IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. *)
 
+open Asttypes
+
 type 'a loc = {
   txt : 'a;
   loc : Location.t
@@ -45,51 +47,48 @@ type asnop =
   | Assign
 
 type tp =
-  | TInt
-  | TBool
-  | TString
-  | TChar
-  | TPointer of tp
-  | TArray of tp
-  | TStruct of string loc
-  | TName of string loc
+  | Ptyp_bool
+  | Ptyp_char
+  | Ptyp_int
+  | Ptyp_string
+  | Ptyp_pointer of tp
+  | Ptyp_array of tp
+  | Ptyp_struct of string loc
+  | Ptyp_name of string loc
 
 type expr =
-  | EInt of int32
-  | EString of string
-  | EChar of char
-  | EBool of bool
-  | EIdent of string loc
-  | EBinop of expr loc * binop * expr loc
-  | EUnop of unop * expr loc
-  | ECond of expr loc * expr loc * expr loc
-  | ECall of string loc * expr loc list
-  | EField of expr loc * string loc
-  | EIndex of expr loc * expr loc
-  | EDeref of expr loc
-  | EAlloc of tp
-  | EAllocArray of tp * expr loc
+  | Pexp_const of constant
+  | Pexp_ident of string loc
+  | Pexp_binop of expr loc * binop * expr loc
+  | Pexp_unop of unop * expr loc
+  | Pexp_cond of expr loc * expr loc * expr loc
+  | Pexp_call of string loc * expr loc list
+  | Pexp_field of expr loc * string loc
+  | Pexp_index of expr loc * expr loc
+  | Pexp_deref of expr loc
+  | Pexp_alloc of tp
+  | Pexp_allocarray of tp * expr loc
 
 and lval =
-  | LIdent of string loc
-  | LField of lval loc * string loc
-  | LIndex of lval loc * expr loc
-  | LDeref of lval loc
+  | Pref_ident of string loc
+  | Pref_field of lval loc * string loc
+  | Pref_index of lval loc * expr loc
+  | Pref_deref of lval loc
 
 type stmt =
-  | SEmpty
-  | SAssign of lval loc * asnop * expr loc
-  | SExpr of expr loc
-  | SDef of tp * string loc * expr loc option * stmt
-  | SIf of expr loc * stmt * stmt
-  | SWhile of expr loc * stmt
+  | Pstm_empty
+  | Pstm_assign of lval loc * asnop * expr loc
+  | Pstm_expr of expr loc
+  | Pstm_def of tp * string loc * expr loc option * stmt
+  | Pstm_ifthenelse of expr loc * stmt * stmt
+  | Pstm_while of expr loc * stmt
   (* | SFor of stmt * expr loc * stmt * stmt *)
-  | SReturn of expr loc option
-  | SSeq of stmt * stmt
-  | SAssert of expr loc
-  | SError of expr loc
-  | SBreak
-  | SContinue
+  | Pstm_return of expr loc option
+  | Pstm_seq of stmt * stmt
+  | Pstm_assert of expr loc
+  | Pstm_error of expr loc
+  | Pstm_break
+  | Pstm_continue
 
 type function_definition = {
   pfun_name : string loc;

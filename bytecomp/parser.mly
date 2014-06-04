@@ -16,16 +16,16 @@ let maptxt f d =
   { d with txt = f d.txt }
 
 let rec lval = function
-  | EIdent id -> LIdent id
-  | EField (e, id) -> LField (maptxt lval e, id)
-  | EIndex (e1, e2) -> LIndex (maptxt lval e1, e2)
+  | Pexp_ident id -> Pref_ident id
+  | Pexp_field (e, id) -> Pref_field (maptxt lval e, id)
+  | Pexp_index (e1, e2) -> Pref_index (maptxt lval e1, e2)
   | _ -> raise Exit
 
 let seq s1 s2 =
   match s1, s2 with
-  | SEmpty, _ -> s2
-  | _, SEmpty -> s1
-  | _ -> SSeq (s1, s2)
+  | Pstm_empty, _ -> s2
+  | _, Pstm_empty -> s1
+  | _ -> Pstm_seq (s1, s2)
 
 let unclosed opening_name opening_num closing_name closing_num =
   let open Syntaxerr in
@@ -50,7 +50,7 @@ let expecting num name =
 %token GREATEREQUAL
 %token <string> IDENT
 %token IF
-%token <int32> INTLIT
+%token <nativeint> INTLIT
 %token <char> CHARLIT
 %token TRUE
 %token FALSE
@@ -144,23 +144,23 @@ ident_or_fail:
   
 tp:
     INT
-    { TInt }
+    { Ptyp_int }
   | BOOL
-    { TBool }
+    { Ptyp_bool }
   | STRING
-    { TString }
+    { Ptyp_string }
   | CHAR
-    { TChar }
+    { Ptyp_char }
   | tp STAR
-    { TPointer $1 }
+    { Ptyp_pointer $1 }
   | tp LBRACKET RBRACKET
-    { TArray $1 }
+    { Ptyp_array $1 }
   | tp LBRACKET error
     { unclosed "[" 2 "]" 3 }
   | STRUCT ident_or_fail
-    { TStruct $2 }
+    { Ptyp_struct $2 }
   | ident
-    { TName $1 }
+    { Ptyp_name $1 }
   ;
 
 expr_list:
@@ -227,44 +227,44 @@ expr:
     LPAREN expr RPAREN
     { $2 }
   | INTLIT
-    { mkloc (EInt $1) }
+    { mkloc (Pexp_const (Const_int $1)) }
   | STRINGLIT
-    { mkloc (EString $1) }
+    { mkloc (Pexp_const (Const_string $1)) }
   | CHARLIT
-    { mkloc (EChar $1) }
+    { mkloc (Pexp_const (Const_char $1)) }
   | TRUE
-    { mkloc (EBool true) }
+    { mkloc (Pexp_const (Const_bool true)) }
   | FALSE
-    { mkloc (EBool false) }
+    { mkloc (Pexp_const (Const_bool false)) }
   | ident
-    { mkloc (EIdent $1) }
+    { mkloc (Pexp_ident $1) }
   | e1 = expr op = binop e2 = expr
-    { mkloc (EBinop (e1, op, e2)) }
+    { mkloc (Pexp_binop (e1, op, e2)) }
   | op = unop e = expr %prec prec_unary_op
-    { mkloc (EUnop (op, e)) }
+    { mkloc (Pexp_unop (op, e)) }
   | expr QUESTION expr colon_or_fail expr
-    { mkloc (ECond ($1, $3, $5)) }
+    { mkloc (Pexp_cond ($1, $3, $5)) }
   | ident inparen_or_fail(expr_list)
-    { mkloc (ECall ($1, $2)) }
+    { mkloc (Pexp_call ($1, $2)) }
   | expr DOT ident_or_fail
-    { mkloc (EField ($1, $3)) }
+    { mkloc (Pexp_field ($1, $3)) }
   | expr ARROW ident_or_fail
-    { mkloc (EField (mkloc (EDeref $1), $3)) }
+    { mkloc (Pexp_field (mkloc (Pexp_deref $1), $3)) }
   | expr LBRACKET expr RBRACKET
-    { mkloc (EIndex ($1, $3)) }
+    { mkloc (Pexp_index ($1, $3)) }
   | expr LBRACKET expr error
     { unclosed "[" 2 "]" 4 }
   | STAR expr %prec prec_unary_op
-    { mkloc (EDeref $2) }
+    { mkloc (Pexp_deref $2) }
   | ALLOC inparen_or_fail(tp)
-    { mkloc (EAlloc $2) }
+    { mkloc (Pexp_alloc $2) }
   | alloc_array
     { $1 }
   ;
 
 alloc_array:
     ALLOC_ARRAY LPAREN tp COMMA expr RPAREN
-    { mkloc (EAllocArray ($3, $5)) }
+    { mkloc (Pexp_allocarray ($3, $5)) }
   | ALLOC_ARRAY LPAREN tp COMMA expr error
     { unclosed "(" 2 ")" 6 }
   ;
@@ -308,13 +308,13 @@ lval:
 
 simple:
     lv = lval op = asnop e = expr
-    { SAssign (lv, op, e) }
+    { Pstm_assign (lv, op, e) }
   | lval PLUSPLUS
-    { SAssign ($1, ArithAssign Add, mkdummyloc (EInt 1l)) }
+    { Pstm_assign ($1, ArithAssign Add, mkdummyloc (Pexp_const (Const_int 1n))) }
   | lval MINUSMINUS
-    { SAssign ($1, ArithAssign Sub, mkdummyloc (EInt 1l)) }
+    { Pstm_assign ($1, ArithAssign Sub, mkdummyloc (Pexp_const (Const_int 1n))) }
   | expr
-    { SExpr $1 }
+    { Pstm_expr $1 }
   ;
 
 opt_equal_expr:
@@ -324,11 +324,11 @@ opt_equal_expr:
 
 block_stmts:
     /* empty */
-    { SEmpty }
+    { Pstm_empty }
   | stmt block_stmts
     { seq $1 $2 }
   | tp ident opt_equal_expr semi_or_fail block_stmts
-    { SDef ($1, $2, $3, $5) }
+    { Pstm_def ($1, $2, $3, $5) }
   ;
 
 block:
@@ -354,7 +354,7 @@ inparen_or_fail(X):
 
 opt_simple:
     /* nothing */
-    { SEmpty }
+    { Pstm_empty }
   | simple
     { $1 }
   ;
@@ -368,43 +368,43 @@ stmt:
 
 stmtu:
     IF inparen_or_fail(expr) stmtm ELSE stmtu
-    { SIf ($2, $3, $5) }
+    { Pstm_ifthenelse ($2, $3, $5) }
   | IF inparen_or_fail(expr) stmt
-    { SIf ($2, $3, SEmpty) }
+    { Pstm_ifthenelse ($2, $3, Pstm_empty) }
   | WHILE inparen_or_fail(expr) stmtu
-    { SWhile ($2, $3) }
+    { Pstm_while ($2, $3) }
   ;
 
 for_loop:
     FOR LPAREN opt_simple SEMI expr SEMI opt_simple RPAREN stmtm
-    { seq $3 (SWhile ($5, seq $9 $7)) }
+    { seq $3 (Pstm_while ($5, seq $9 $7)) }
   | FOR LPAREN tp ident opt_equal_expr SEMI expr SEMI opt_simple RPAREN stmtm
-    { SDef ($3, $4, $5, SWhile ($7, seq $11 $9)) }
+    { Pstm_def ($3, $4, $5, Pstm_while ($7, seq $11 $9)) }
   ;
   
 stmtm:
     simple SEMI
     { $1 }
   | IF inparen_or_fail(expr) stmtm ELSE stmtm
-    { SIf ($2, $3, $5) }
+    { Pstm_ifthenelse ($2, $3, $5) }
   | WHILE inparen_or_fail(expr) stmtm
-    { SWhile ($2, $3) }
+    { Pstm_while ($2, $3) }
   | for_loop
     { $1 }
   | RETURN SEMI
-    { SReturn None }
+    { Pstm_return None }
   | RETURN expr SEMI
-    { SReturn (Some $2) }
+    { Pstm_return (Some $2) }
   | block
     { $1 }
   | ASSERT inparen_or_fail(expr) semi_or_fail
-    { SAssert $2 }
+    { Pstm_assert $2 }
   | ERROR inparen_or_fail(expr) semi_or_fail
-    { SError $2 }
+    { Pstm_error $2 }
   | BREAK semi_or_fail
-    { SBreak }
+    { Pstm_break }
   | CONTINUE semi_or_fail
-    { SContinue }
+    { Pstm_continue }
   ;
 
 (* rec_fun_decl: *)

@@ -22,6 +22,7 @@
 open Format
 open Lexing
 open Location
+open Asttypes
 open Parsetree
 
 let fmt_position ppf loc =
@@ -76,24 +77,24 @@ let rec tp i ppf t =
   line i ppf "type\n";
   let i = i+1 in
   match t with
-  | TInt ->
-    line i ppf "TInt\n"
-  | TBool ->
-    line i ppf "TBool\n"
-  | TString ->
-    line i ppf "TString\n"
-  | TChar ->
-    line i ppf "TChar\n"
-  | TPointer t ->
-    line i ppf "TPointer\n";
+  | Ptyp_int ->
+    line i ppf "Ptyp_int\n"
+  | Ptyp_bool ->
+    line i ppf "Ptyp_bool\n"
+  | Ptyp_string ->
+    line i ppf "Ptyp_string\n"
+  | Ptyp_char ->
+    line i ppf "Ptyp_char\n"
+  | Ptyp_pointer t ->
+    line i ppf "Ptyp_pointer\n";
     tp i ppf t
-  | TArray t ->
-    line i ppf "TArray\n";
+  | Ptyp_array t ->
+    line i ppf "Ptyp_array\n";
     tp i ppf t
-  | TStruct id ->
-    line i ppf "TStruct %a\n" fmt_string_loc id
-  | TName id ->
-    line i ppf "TName %a\n" fmt_string_loc id
+  | Ptyp_struct id ->
+    line i ppf "Ptyp_struct %a\n" fmt_string_loc id
+  | Ptyp_name id ->
+    line i ppf "Ptyp_name %a\n" fmt_string_loc id
 
 let string_of_arithop = function
   | Add -> "+"
@@ -130,46 +131,40 @@ let rec expr i ppf e =
   line i ppf "expression %a\n" fmt_location e.loc;
   let i = i+1 in
   match e.txt with
-  | EInt n ->
-    line i ppf "EInt %li\n" n
-  | EString s ->
-    line i ppf "EString %S\n" s
-  | EChar c ->
-    line i ppf "EChar %C\n" c
-  | EBool b ->
-    line i ppf "EBool %B\n" b
-  | EIdent id ->
-    line i ppf "EIdent %a\n" fmt_string_loc id
-  | EBinop (e1, op, e2) ->
-    line i ppf "EBinop %S\n" (string_of_binop op);
+  | Pexp_const cst ->
+    line i ppf "Pexp_const %a\n" print_constant cst
+  | Pexp_ident id ->
+    line i ppf "Pexp_ident %a\n" fmt_string_loc id
+  | Pexp_binop (e1, op, e2) ->
+    line i ppf "Pexp_binop %S\n" (string_of_binop op);
     expr i ppf e1;
     expr i ppf e2
-  | EUnop (op, e) ->
-    line i ppf "EUnop %S\n" (string_of_unop op);
+  | Pexp_unop (op, e) ->
+    line i ppf "Pexp_unop %S\n" (string_of_unop op);
     expr i ppf e
-  | ECond (e1, e2, e3) ->
-    line i ppf "ECond\n";
+  | Pexp_cond (e1, e2, e3) ->
+    line i ppf "Pexp_cond\n";
     expr i ppf e1;
     expr i ppf e2;
     expr i ppf e3
-  | ECall (id, el) ->
-    line i ppf "ECall %a\n" fmt_string_loc id;
+  | Pexp_call (id, el) ->
+    line i ppf "Pexp_call %a\n" fmt_string_loc id;
     list i expr ppf el
-  | EField (e, id) ->
-    line i ppf "EField %a\n" fmt_string_loc id;
+  | Pexp_field (e, id) ->
+    line i ppf "Pexp_field %a\n" fmt_string_loc id;
     expr i ppf e
-  | EIndex (e1, e2) ->
-    line i ppf "EIndex\n";
+  | Pexp_index (e1, e2) ->
+    line i ppf "Pexp_index\n";
     expr i ppf e1;
     expr i ppf e2
-  | EDeref e ->
-    line i ppf "EDeref\n";
+  | Pexp_deref e ->
+    line i ppf "Pexp_deref\n";
     expr i ppf e
-  | EAlloc t ->
-    line i ppf "EAlloc\n";
+  | Pexp_alloc t ->
+    line i ppf "Pexp_alloc\n";
     tp i ppf t
-  | EAllocArray (t, e) ->
-    line i ppf "EAllocArray\n";
+  | Pexp_allocarray (t, e) ->
+    line i ppf "Pexp_allocarray\n";
     tp i ppf t;
     expr i ppf e
 
@@ -177,17 +172,17 @@ and lval i ppf lv =
   line i ppf "lvalue %a\n" fmt_location lv.loc;
   let i = i+1 in
   match lv.txt with
-  | LIdent id ->
-    line i ppf "LIdent %a\n" fmt_string_loc id
-  | LField (lv, id) ->
-    line i ppf "LField %a\n" fmt_string_loc id;
+  | Pref_ident id ->
+    line i ppf "Pref_ident %a\n" fmt_string_loc id
+  | Pref_field (lv, id) ->
+    line i ppf "Pref_field %a\n" fmt_string_loc id;
     lval i ppf lv
-  | LIndex (lv, e) ->
-    line i ppf "LIndex\n";
+  | Pref_index (lv, e) ->
+    line i ppf "Pref_index\n";
     lval i ppf lv;
     expr i ppf e
-  | LDeref lv ->
-    line i ppf "LDeref\n";
+  | Pref_deref lv ->
+    line i ppf "Pref_deref\n";
     lval i ppf lv
 
 let string_of_asnop = function
@@ -199,46 +194,46 @@ let rec stmt i ppf s =
   line i ppf "statement\n";
   let i = i+1 in
   match s with
-  | SEmpty ->
-    line i ppf "SEmpty\n"
-  | SAssign (lv, op, e) ->
-    line i ppf "SAssign %S\n" (string_of_asnop op);
+  | Pstm_empty ->
+    line i ppf "Pstm_empty\n"
+  | Pstm_assign (lv, op, e) ->
+    line i ppf "Pstm_assign %S\n" (string_of_asnop op);
     lval i ppf lv;
     expr i ppf e
-  | SExpr e ->
-    line i ppf "SExpr\n";
+  | Pstm_expr e ->
+    line i ppf "Pstm_expr\n";
     expr i ppf e
-  | SDef (t, id, e, s) ->
-    line i ppf "SDef %a\n" fmt_string_loc id;
+  | Pstm_def (t, id, e, s) ->
+    line i ppf "Pstm_def %a\n" fmt_string_loc id;
     tp i ppf t;
     option i expr ppf e;
     stmt i ppf s
-  | SIf (e, s1, s2) ->
-    line i ppf "SIf\n";
+  | Pstm_ifthenelse (e, s1, s2) ->
+    line i ppf "Pstm_ifthenelse\n";
     expr i ppf e;
     stmt i ppf s1;
     stmt i ppf s2
-  | SWhile (e, s) ->
-    line i ppf "SWhile\n";
+  | Pstm_while (e, s) ->
+    line i ppf "Pstm_while\n";
     expr i ppf e;
     stmt i ppf s
-  | SReturn e ->
-    line i ppf "SReturn\n";
+  | Pstm_return e ->
+    line i ppf "Pstm_return\n";
     option i expr ppf e
-  | SSeq (s1, s2) ->
-    line i ppf "SSeq\n";
+  | Pstm_seq (s1, s2) ->
+    line i ppf "Pstm_seq\n";
     stmt i ppf s1;
     stmt i ppf s2
-  | SAssert e ->
-    line i ppf "SAssert\n";
+  | Pstm_assert e ->
+    line i ppf "Pstm_assert\n";
     expr i ppf e
-  | SError e ->
-    line i ppf "SError\n";
+  | Pstm_error e ->
+    line i ppf "Pstm_error\n";
     expr i ppf e
-  | SBreak ->
-    line i ppf "SBreak\n"
-  | SContinue ->
-    line i ppf "SContinue\n"
+  | Pstm_break ->
+    line i ppf "Pstm_break\n"
+  | Pstm_continue ->
+    line i ppf "Pstm_continue\n"
       
   (* | Pexp_get (e1, e2) -> *)
 (*     line i ppf "Pexp_get\n"; *)
