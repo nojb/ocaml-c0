@@ -112,6 +112,8 @@ rule token = parse
           INTLIT (cvt_int_literal s)
         with Failure _ ->
           raise (Error (Literal_overflow, Location.curr lexbuf)) }
+  | "->"
+    { ARROW }
   | "++"
     { PLUSPLUS }
   | '+'
