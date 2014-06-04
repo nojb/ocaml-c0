@@ -27,19 +27,6 @@ let seq s1 s2 =
   | _, SEmpty -> s1
   | _ -> SSeq (s1, s2)
 
-let for_to_while start cond step body =
-  let rec loop s k =
-    match s with
-    | SEmpty -> k
-    | SDef (t, id, e, body) ->
-      SDef (t, id, e, loop body k)
-    | SSeq (s1, s2) ->
-      seq s1 (loop s2 k)
-    | _ ->
-      seq s k
-  in
-  loop start (SWhile (cond, seq body step))
-
 let unclosed opening_name opening_num closing_name closing_num =
   let open Syntaxerr in
   raise (Error (Unclosed (rhs_loc opening_num, opening_name, rhs_loc closing_num, closing_name)))
@@ -365,15 +352,6 @@ inparen_or_fail(X):
     { unclosed "(" 1 ")" 3 }
   ;
 
-simple_or_defn:
-    /* nothing */
-    { SEmpty }
-  | simple
-    { $1 }
-  | tp ident opt_equal_expr
-    { SDef ($1, $2, $3, SEmpty) }
-  ;
-
 opt_simple:
     /* nothing */
     { SEmpty }
@@ -397,6 +375,13 @@ stmtu:
     { SWhile ($2, $3) }
   ;
 
+for_loop:
+    FOR LPAREN opt_simple SEMI expr SEMI opt_simple RPAREN stmtm
+    { seq $3 (SWhile ($5, seq $9 $7)) }
+  | FOR LPAREN tp ident opt_equal_expr SEMI expr SEMI opt_simple RPAREN stmtm
+    { SDef ($3, $4, $5, SWhile ($7, seq $11 $9)) }
+  ;
+  
 stmtm:
     simple SEMI
     { $1 }
@@ -404,8 +389,8 @@ stmtm:
     { SIf ($2, $3, $5) }
   | WHILE inparen_or_fail(expr) stmtm
     { SWhile ($2, $3) }
-  | FOR LPAREN simple_or_defn SEMI expr SEMI opt_simple RPAREN stmtm
-    { for_to_while $3 $5 $7 $9 }
+  | for_loop
+    { $1 }
   | RETURN SEMI
     { SReturn None }
   | RETURN expr SEMI
