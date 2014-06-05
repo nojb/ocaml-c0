@@ -59,13 +59,13 @@ type tp =
 type expr =
   | Pexp_const of constant
   | Pexp_ident of string loc
+  | Pexp_getfield of expr loc * string loc
+  | Pexp_get of expr loc * expr loc
+  | Pexp_load of expr loc
   | Pexp_binop of expr loc * binop * expr loc
   | Pexp_unop of unop * expr loc
   | Pexp_cond of expr loc * expr loc * expr loc
   | Pexp_call of string loc * expr loc list
-  | Pexp_getfield of expr loc * string loc
-  | Pexp_get of expr loc * expr loc
-  | Pexp_load of expr loc
   | Pexp_alloc of tp
   | Pexp_allocarray of tp * expr loc
 

@@ -1,7 +1,9 @@
 let main () =
   let lexbuf = Lexing.from_channel stdin in
   let p = Parser.program Lexer.token lexbuf in
-  Printast.program Format.std_formatter p
+  Printast.program Format.std_formatter p;
+  let lam = Typecore.program p in
+  Printlambda.program Format.std_formatter lam
 
 let _ =
   try
