@@ -96,36 +96,36 @@ let rec tp i ppf t =
   | Ptyp_name id ->
     line i ppf "Ptyp_name %a\n" fmt_string_loc id
 
-let string_of_arithop = function
-  | Add -> "+"
-  | Sub -> "-"
-  | Mul -> "*"
-  | Div -> "/"
-  | Mod -> "%"
-  | Lsl -> "<<"
-  | Asr -> ">>"
-  | And -> "&"
-  | Or -> "|"
-  | Xor -> "^"
+(* let string_of_arithop = function *)
+(*   | Add -> "+" *)
+(*   | Sub -> "-" *)
+(*   | Mul -> "*" *)
+(*   | Div -> "/" *)
+(*   | Mod -> "%" *)
+(*   | Lsl -> "<<" *)
+(*   | Asr -> ">>" *)
+(*   | And -> "&" *)
+(*   | Or -> "|" *)
+(*   | Xor -> "^" *)
 
-let string_of_comparison = function
-  | Eq -> "=="
-  | Le -> "<="
-  | Ne -> "!="
-  | Lt -> "<"
-  | Ge -> ">="
-  | Gt -> ">"
+(* let string_of_comparison = function *)
+(*   | Eq -> "==" *)
+(*   | Le -> "<=" *)
+(*   | Ne -> "!=" *)
+(*   | Lt -> "<" *)
+(*   | Ge -> ">=" *)
+(*   | Gt -> ">" *)
 
-let string_of_binop = function
-  | Arith op -> string_of_arithop op
-  | Cmp c -> string_of_comparison c
-  | Land -> "&&"
-  | Lor -> "||"
+(* let string_of_binop = function *)
+(*   | Arith op -> string_of_arithop op *)
+(*   | Cmp c -> string_of_comparison c *)
+(*   | Land -> "&&" *)
+(*   | Lor -> "||" *)
 
-let string_of_unop = function
-  | Not -> "!"
-  | Lnot -> "~"
-  | Neg -> "-"
+(* let string_of_unop = function *)
+(*   | Not -> "!" *)
+(*   | Lnot -> "~" *)
+(*   | Neg -> "-" *)
 
 let rec expr i ppf e =
   line i ppf "expression %a\n" fmt_location e.loc;
@@ -136,11 +136,11 @@ let rec expr i ppf e =
   | Pexp_ident id ->
     line i ppf "Pexp_ident %a\n" fmt_string_loc id
   | Pexp_binop (e1, op, e2) ->
-    line i ppf "Pexp_binop %S\n" (string_of_binop op);
+    line i ppf "Pexp_binop %S\n" (string_of_binary_operator op);
     expr i ppf e1;
     expr i ppf e2
   | Pexp_unop (op, e) ->
-    line i ppf "Pexp_unop %S\n" (string_of_unop op);
+    line i ppf "Pexp_unop %S\n" (string_of_unary_operator op);
     expr i ppf e
   | Pexp_cond (e1, e2, e3) ->
     line i ppf "Pexp_cond\n";
@@ -170,7 +170,7 @@ let rec expr i ppf e =
 
 let string_of_asnop = function
   | ArithAssign op ->
-    string_of_arithop op ^ "="
+    string_of_arith_operator op ^ "="
   | Assign -> "="
 
 let rec stmt i ppf s =

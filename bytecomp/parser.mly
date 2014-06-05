@@ -170,50 +170,50 @@ expr_list:
 
 %inline binop:
     PLUS
-    { Arith Add }
+    { Bop_arith Aop_add }
   | MINUS
-    { Arith Sub }
+    { Bop_arith Aop_sub }
   | STAR
-    { Arith Mul }
+    { Bop_arith Aop_mul }
   | SLASH
-    { Arith Div }
+    { Bop_arith Aop_div }
   | PERCENT
-    { Arith Mod }
+    { Bop_arith Aop_mod }
   | LESSLESS
-    { Arith Lsl }
+    { Bop_arith Aop_lsl }
   | GREATERGREATER
-    { Arith Asr }
+    { Bop_arith Aop_asr }
   | AMPERSAND
-    { Arith And }
+    { Bop_arith Aop_and }
   | BAR
-    { Arith Or }
+    { Bop_arith Aop_or }
   | CARET
-    { Arith Xor }
+    { Bop_arith Aop_xor }
   | LESS
-    { Cmp Lt }
+    { Bop_cmp Clt }
   | LESSEQUAL
-    { Cmp Le }
+    { Bop_cmp Cle }
   | GREATER
-    { Cmp Gt }
+    { Bop_cmp Cgt }
   | GREATEREQUAL
-    { Cmp Ge }
+    { Bop_cmp Cge }
   | EQUALEQUAL
-    { Cmp Eq }
+    { Bop_cmp Ceq }
   | BANGEQUAL
-    { Cmp Ne }
+    { Bop_cmp Cneq }
   | AMPERSANDAMPERSAND
-    { Land }
+    { Bop_logic Lop_and }
   | BARBAR
-    { Lor }
+    { Bop_logic Lop_or }
   ;
 
 %inline unop:
     BANG
-    { Not }
+    { Uop_lnot }
   | TILDE
-    { Lnot }
+    { Uop_not }
   | MINUS
-    { Neg }
+    { Uop_neg }
   ;
 
 colon_or_fail:
@@ -273,34 +273,27 @@ alloc_array:
 
 %inline asnop:
     PLUSEQUAL
-    { ArithAssign Add }
+    { ArithAssign Aop_add }
   | MINUSEQUAL
-    { ArithAssign Sub }
+    { ArithAssign Aop_sub }
   | STAREQUAL
-    { ArithAssign Mul }
+    { ArithAssign Aop_mul }
   | SLASHEQUAL
-    { ArithAssign Div }
+    { ArithAssign Aop_div }
   | PERCENTEQUAL
-    { ArithAssign Mod }
+    { ArithAssign Aop_mod }
   | LESSLESSEQUAL
-    { ArithAssign Lsl }
+    { ArithAssign Aop_lsl }
   | GREATERGREATEREQUAL
-    { ArithAssign Asr }
+    { ArithAssign Aop_asr }
   | AMPERSANDEQUAL
-    { ArithAssign And }
+    { ArithAssign Aop_and }
   | BAREQUAL
-    { ArithAssign Or }
+    { ArithAssign Aop_or }
   | CARETEQUAL
-    { ArithAssign Xor }
+    { ArithAssign Aop_xor }
   | EQUAL
     { Assign }
-  ;
-
-inbrackets(X):
-    LBRACKET x = X RBRACKET
-    { x }
-  | LBRACKET X error
-    { unclosed "[" 1 "]" 3 }
   ;
 
 simple:
@@ -308,12 +301,12 @@ simple:
     { try lvalue lv.txt op e with Exit -> expecting 1 "lvalue" }
   | expr PLUSPLUS
     { try
-        lvalue $1.txt (ArithAssign Add) (mkdummyloc (Pexp_const (Const_int 1n)))
+        lvalue $1.txt (ArithAssign Aop_add) (mkdummyloc (Pexp_const (Const_int 1n)))
       with
       | Exit -> expecting 1 "lvalue" }
   | expr MINUSMINUS
     { try
-        lvalue $1.txt (ArithAssign Sub) (mkdummyloc (Pexp_const (Const_int 1n)))
+        lvalue $1.txt (ArithAssign Aop_sub) (mkdummyloc (Pexp_const (Const_int 1n)))
       with
       | Exit -> expecting 1 "lvalue" }
   | expr

@@ -30,7 +30,8 @@ type comparison =
   | Ceq | Cneq | Clt | Cgt | Cle | Cge
 
 type arith_operator =
-  | Aop_add | Aop_sub | Aop_mul | Aop_div
+  | Aop_add | Aop_sub | Aop_mul | Aop_div | Aop_mod
+  | Aop_lsl | Aop_asr | Aop_and | Aop_or | Aop_xor
 
 type logic_operator =
   | Lop_and
@@ -41,10 +42,14 @@ type binary_operator =
   | Bop_logic of logic_operator
   | Bop_cmp of comparison
 
+val string_of_arith_operator : arith_operator -> string
+
 val string_of_binary_operator : binary_operator -> string
   
 type unary_operator =
-  | Uop_minus
+  | Uop_neg
+  | Uop_not
+  | Uop_lnot
 
 val string_of_unary_operator : unary_operator -> string
 

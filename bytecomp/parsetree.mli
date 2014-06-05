@@ -26,24 +26,8 @@ type 'a loc = {
   loc : Location.t
 }
 
-type compop =
-  | Eq | Ne | Le | Lt | Ge | Gt
-
-type arithop =
-  | Add | Sub | Mul | Div | Mod
-  | Lsl | Asr | And | Or | Xor
-
-type binop =
-  | Arith of arithop
-  | Cmp of compop
-  | Land
-  | Lor
-
-type unop =
-  | Not | Lnot | Neg
-
 type asnop =
-  | ArithAssign of arithop
+  | ArithAssign of arith_operator
   | Assign
 
 type tp =
@@ -62,8 +46,8 @@ type expr =
   | Pexp_getfield of expr loc * string loc
   | Pexp_get of expr loc * expr loc
   | Pexp_load of expr loc
-  | Pexp_binop of expr loc * binop * expr loc
-  | Pexp_unop of unop * expr loc
+  | Pexp_binop of expr loc * binary_operator * expr loc
+  | Pexp_unop of unary_operator * expr loc
   | Pexp_cond of expr loc * expr loc * expr loc
   | Pexp_call of string loc * expr loc list
   | Pexp_alloc of tp

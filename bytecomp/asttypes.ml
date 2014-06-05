@@ -30,7 +30,8 @@ type comparison =
   | Ceq | Cneq | Clt | Cgt | Cle | Cge
 
 type arith_operator =
-  | Aop_add | Aop_sub | Aop_mul | Aop_div
+  | Aop_add | Aop_sub | Aop_mul | Aop_div | Aop_mod
+  | Aop_lsl | Aop_asr | Aop_and | Aop_or | Aop_xor
 
 type logic_operator =
   | Lop_and
@@ -41,25 +42,38 @@ type binary_operator =
   | Bop_logic of logic_operator
   | Bop_cmp of comparison
 
+let string_of_arith_operator = function
+  | Aop_add -> "+"
+  | Aop_sub -> "-"
+  | Aop_mul -> "*"
+  | Aop_div -> "/"
+  | Aop_mod -> "%"
+  | Aop_lsl -> "<<"
+  | Aop_asr -> ">>"
+  | Aop_and -> "&"
+  | Aop_or -> "|"
+  | Aop_xor -> "^"
+
 let string_of_binary_operator = function
-  | Bop_arith Aop_add -> "+"
-  | Bop_arith Aop_sub -> "-"
-  | Bop_arith Aop_mul -> "*"
-  | Bop_arith Aop_div -> "/"
-  | Bop_logic Lop_and -> "&"
-  | Bop_logic Lop_or -> "|"
-  | Bop_cmp Ceq -> "="
-  | Bop_cmp Cneq -> "<>"
+  | Bop_arith op -> string_of_arith_operator op
+  | Bop_logic Lop_and -> "&&"
+  | Bop_logic Lop_or -> "||"
+  | Bop_cmp Ceq -> "=="
+  | Bop_cmp Cneq -> "!="
   | Bop_cmp Cle -> "<="
   | Bop_cmp Clt -> "<"
   | Bop_cmp Cge -> ">="
   | Bop_cmp Cgt -> ">"
 
 type unary_operator =
-  | Uop_minus
+  | Uop_neg
+  | Uop_not
+  | Uop_lnot
 
 let string_of_unary_operator = function
-  | Uop_minus -> "-"
+  | Uop_neg -> "-"
+  | Uop_not -> "~"
+  | Uop_lnot -> "!"
 
 open Format
 
