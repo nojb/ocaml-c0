@@ -12,14 +12,6 @@ let mkdummyloc d =
   { txt = d;
     loc = dummy }
 
-let rec lvalue lv op e =
-  match lv with
-  | Pexp_ident id -> Pstm_assign (id, op, e)
-  | Pexp_getfield (e1, id) -> Pstm_setfield (e1, id, op, e)
-  | Pexp_get (e1, e2) -> Pstm_set (e1, e2, op, e)
-  | Pexp_load e1 -> Pstm_store (e1, op, e)
-  | _ -> raise Exit
-
 let seq s1 s2 =
   match s1, s2 with
   | Pstm_empty, _ -> s2
@@ -33,6 +25,14 @@ let unclosed opening_name opening_num closing_name closing_num =
 let expecting num name =
   let open Syntaxerr in
   raise (Error (Expecting (rhs_loc num, name)))
+
+let rec lvalue pos lv op e =
+  match lv with
+  | Pexp_ident id -> Pstm_assign (id, op, e)
+  | Pexp_getfield (e1, id) -> Pstm_setfield (e1, id, op, e)
+  | Pexp_get (e1, e2) -> Pstm_set (e1, e2, op, e)
+  | Pexp_load e1 -> Pstm_store (e1, op, e)
+  | _ -> expecting pos "lvalue"
 %}
 
 %token AMPERSAND
@@ -298,17 +298,11 @@ alloc_array:
 
 simple:
     lv = expr op = asnop e = expr
-    { try lvalue lv.txt op e with Exit -> expecting 1 "lvalue" }
+    { lvalue 1 lv.txt op e }
   | expr PLUSPLUS
-    { try
-        lvalue $1.txt (ArithAssign Aop_add) (mkdummyloc (Pexp_const (Const_int 1n)))
-      with
-      | Exit -> expecting 1 "lvalue" }
+    { lvalue 1 $1.txt (ArithAssign Aop_add) (mkdummyloc (Pexp_const (Const_int 1n))) }
   | expr MINUSMINUS
-    { try
-        lvalue $1.txt (ArithAssign Aop_sub) (mkdummyloc (Pexp_const (Const_int 1n)))
-      with
-      | Exit -> expecting 1 "lvalue" }
+    { lvalue 1 $1.txt (ArithAssign Aop_sub) (mkdummyloc (Pexp_const (Const_int 1n))) }
   | expr
     { Pstm_expr $1 }
   ;

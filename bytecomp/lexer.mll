@@ -117,14 +117,22 @@ rule token = parse
     { ARROW }
   | "++"
     { PLUSPLUS }
+  | "+="
+    { PLUSEQUAL }
   | '+'
-      { PLUS }
+    { PLUS }
+  | "*="
+    { STAREQUAL }
   | '*'
-      { STAR }
+    { STAR }
   | "--"
     { MINUSMINUS }
+  | "-="
+    { MINUSEQUAL }
   | '-'
-      { MINUS }
+    { MINUS }
+  | "/="
+    { SLASHEQUAL }
   | '/'
       { SLASH }
   | "%="
