@@ -197,6 +197,7 @@ let rec size_of tenv = function
   | Tint
   | Tstring
   | Tarray _ -> 1
+  | Talias (_, t) -> size_of tenv t
   | Tstruct id ->
     try
       match Tbl.find id.txt tenv with

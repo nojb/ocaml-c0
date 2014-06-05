@@ -57,7 +57,7 @@ let rec print ppf = function
   | Tstring -> fprintf ppf "string"
   | Tbool -> fprintf ppf "bool"
   | Tchar -> fprintf ppf "char"
-  | Tstruct id -> fprintf ppf "struct %s" id.txt
+  | Tstruct id -> fprintf ppf "struct %s" id.Parsetree.txt
   | Talias (id, t) -> fprintf ppf "%s = %a" id print t
   | Tpointer t -> fprintf ppf "%a *" print t
   | Tarray t -> fprintf ppf "%a []" print t
