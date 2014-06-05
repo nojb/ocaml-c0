@@ -332,6 +332,9 @@ let rec stmt venv tenv inloop s =
     let oexp = expr_with_type elty venv tenv e3 in
     let lnum = e2.loc.Location.loc_start.Lexing.pos_lnum in
     Lprim (Pset lnum, [aexp; iexp; oexp])
+  | Pstm_expr e ->
+    let e, _ = expr venv tenv e in
+    e
   | Pstm_def (t, id, Some e, s) ->
     let t = tp venv t in
     if is_large t then raise (Error (id.loc, Illegal_large_type t));
