@@ -23,12 +23,6 @@ open Format
 open Asttypes
 open Lambda
 
-let constant ppf = function
-  | Const_bool b -> fprintf ppf "%B" b
-  | Const_char c -> fprintf ppf "%C" c
-  | Const_int n -> fprintf ppf "%ni" n
-  | Const_string s -> fprintf ppf "%S" s
-
 let primitive ppf = function
   | Palloc n -> fprintf ppf "alloc %i" n
   | Pallocarray n -> fprintf ppf "allocarray %i" n
@@ -47,7 +41,7 @@ let primitive ppf = function
 
 let rec lambda ppf = function
   | Lconst cst ->
-    constant ppf cst
+    print_constant ppf cst
   | Lident id ->
     Ident.print ppf id
   | Lassign (id, e) ->

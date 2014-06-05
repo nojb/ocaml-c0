@@ -24,6 +24,7 @@ type constant =
   | Const_char of char
   | Const_int of nativeint
   | Const_string of string
+  | Const_null
 
 type comparison =
   | Ceq | Cneq | Clt | Cgt | Cle | Cge

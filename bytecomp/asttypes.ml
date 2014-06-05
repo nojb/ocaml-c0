@@ -24,7 +24,8 @@ type constant =
   | Const_char of char
   | Const_int of nativeint
   | Const_string of string
-
+  | Const_null
+    
 type comparison =
   | Ceq | Cneq | Clt | Cgt | Cle | Cge
 
@@ -67,3 +68,4 @@ let print_constant ppf = function
   | Const_char c -> fprintf ppf "%C" c
   | Const_int n -> fprintf ppf "%ni" n
   | Const_string s -> fprintf ppf "%S" s
+  | Const_null -> fprintf ppf "NULL"

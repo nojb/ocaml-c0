@@ -104,6 +104,7 @@ let expecting num name =
 %token CARETEQUAL
 %token CONTINUE
 %token ARROW
+%token NULL
 
 %type <Parsetree.stmt> program
 %start program
@@ -235,6 +236,8 @@ expr:
     { mkloc (Pexp_const (Const_bool true)) }
   | FALSE
     { mkloc (Pexp_const (Const_bool false)) }
+  | NULL
+    { mkloc (Pexp_const (Const_null)) }
   | ident
     { mkloc (Pexp_ident $1) }
   | e1 = expr op = binop e2 = expr

@@ -59,7 +59,8 @@ let type_of_constant = function
   | Const_char _ -> Tchar
   | Const_int _ -> Tint
   | Const_string _ -> Tstring
-
+  | Const_null -> Tnull
+    
 type value_description =
   | Val_fun of type_expr list * type_expr * Ident.t
   | Val_var of type_expr * Ident.t
