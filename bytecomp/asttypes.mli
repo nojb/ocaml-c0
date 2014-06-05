@@ -33,13 +33,13 @@ type arith_operator =
   | Aop_add | Aop_sub | Aop_mul | Aop_div | Aop_mod
   | Aop_lsl | Aop_asr | Aop_and | Aop_or | Aop_xor
 
-type logic_operator =
-  | Lop_and
-  | Lop_or
+(* type logic_operator = *)
+(*   | Lop_and *)
+(*   | Lop_or *)
 
 type binary_operator =
   | Bop_arith of arith_operator
-  | Bop_logic of logic_operator
+  (* | Bop_logic of logic_operator *)
   | Bop_cmp of comparison
 
 val string_of_arith_operator : arith_operator -> string

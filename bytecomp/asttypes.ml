@@ -33,13 +33,13 @@ type arith_operator =
   | Aop_add | Aop_sub | Aop_mul | Aop_div | Aop_mod
   | Aop_lsl | Aop_asr | Aop_and | Aop_or | Aop_xor
 
-type logic_operator =
-  | Lop_and
-  | Lop_or
+(* type logic_operator = *)
+(*   | Lop_and *)
+(*   | Lop_or *)
 
 type binary_operator =
   | Bop_arith of arith_operator
-  | Bop_logic of logic_operator
+  (* | Bop_logic of logic_operator *)
   | Bop_cmp of comparison
 
 let string_of_arith_operator = function
@@ -56,8 +56,8 @@ let string_of_arith_operator = function
 
 let string_of_binary_operator = function
   | Bop_arith op -> string_of_arith_operator op
-  | Bop_logic Lop_and -> "&&"
-  | Bop_logic Lop_or -> "||"
+  (* | Bop_logic Lop_and -> "&&" *)
+  (* | Bop_logic Lop_or -> "||" *)
   | Bop_cmp Ceq -> "=="
   | Bop_cmp Cneq -> "!="
   | Bop_cmp Cle -> "<="

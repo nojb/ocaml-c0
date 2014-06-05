@@ -33,6 +33,10 @@ let rec lvalue pos lv op e =
   | Pexp_get (e1, e2) -> Pstm_set (e1, e2, op, e)
   | Pexp_load e1 -> Pstm_store (e1, op, e)
   | _ -> expecting pos "lvalue"
+
+let const_true = mkdummyloc (Pexp_const (Const_bool true))
+let const_false = mkdummyloc (Pexp_const (Const_bool false))
+let const_zero = mkdummyloc (Pexp_const (Const_int 0n))
 %}
 
 %token AMPERSAND
@@ -201,10 +205,6 @@ expr_list:
     { Bop_cmp Ceq }
   | BANGEQUAL
     { Bop_cmp Cneq }
-  | AMPERSANDAMPERSAND
-    { Bop_logic Lop_and }
-  | BARBAR
-    { Bop_logic Lop_or }
   ;
 
 %inline unop:
@@ -242,6 +242,10 @@ expr:
     { mkloc (Pexp_ident $1) }
   | e1 = expr op = binop e2 = expr
     { mkloc (Pexp_binop (e1, op, e2)) }
+  | expr AMPERSANDAMPERSAND expr
+    { mkloc (Pexp_cond ($1, $3, const_false)) }
+  | expr BARBAR expr
+    { mkloc (Pexp_cond ($1, const_true, $3)) }
   | op = unop e = expr %prec prec_unary_op
     { mkloc (Pexp_unop (op, e)) }
   | expr QUESTION expr colon_or_fail expr
@@ -300,9 +304,9 @@ simple:
     lv = expr op = asnop e = expr
     { lvalue 1 lv.txt op e }
   | expr PLUSPLUS
-    { lvalue 1 $1.txt (ArithAssign Aop_add) (mkdummyloc (Pexp_const (Const_int 1n))) }
+    { lvalue 1 $1.txt (ArithAssign Aop_add) const_zero }
   | expr MINUSMINUS
-    { lvalue 1 $1.txt (ArithAssign Aop_sub) (mkdummyloc (Pexp_const (Const_int 1n))) }
+    { lvalue 1 $1.txt (ArithAssign Aop_sub) const_zero }
   | expr
     { Pstm_expr $1 }
   ;
