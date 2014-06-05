@@ -334,6 +334,10 @@ let rec stmt venv tenv inloop s =
     let oexp = expr_with_type elty venv tenv e3 in
     let lnum = e2.loc.Location.loc_start.Lexing.pos_lnum in
     Lprim (Pset lnum, [aexp; iexp; oexp])
+  | Pstm_store (e1, Assign, e2) ->
+    let e1, t = pointer_expr venv tenv e1 in
+    let e2 = expr_with_type t venv tenv e2 in
+    Lprim (Pstore, [e1; e2])
   | Pstm_expr e ->
     let e, _ = expr venv tenv e in
     e
