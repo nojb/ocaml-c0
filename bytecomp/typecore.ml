@@ -357,6 +357,14 @@ let rec stmt venv tenv inloop s =
     let lam1 = stmt venv tenv inloop s1 in
     let lam2 = stmt venv tenv inloop s2 in
     Lseq (lam1, lam2)
+  | Pstm_assert e ->
+    let lam = expr_with_type Tbool venv tenv e in
+    let lnum = e.loc.Location.loc_start.Lexing.pos_lnum in
+    Lprim (Passert lnum, [lam])
+  | Pstm_error e ->
+    let lam = expr_with_type Tstring venv tenv e in
+    let lnum = e.loc.Location.loc_start.Lexing.pos_lnum in
+    Lprim (Perror lnum, [lam])
   | Pstm_break ->
     if inloop then Lexit 1
     else raise (Error (Location.dummy, Illegal_break))

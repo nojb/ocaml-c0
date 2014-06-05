@@ -38,6 +38,8 @@ let primitive ppf = function
   | Psetfield i -> fprintf ppf "setfield %i" i
   | Pset l -> fprintf ppf "set %i" l
   | Pget l -> fprintf ppf "get %i" l
+  | Passert l -> fprintf ppf "assert %i" l
+  | Perror l -> fprintf ppf "error %i" l
 
 let rec lambda ppf = function
   | Lconst cst ->

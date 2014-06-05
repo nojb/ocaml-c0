@@ -36,6 +36,8 @@ type primitive =
   | Psetfield of int
   | Pget of int
   | Pset of int
+  | Passert of int
+  | Perror of int
     
 type lambda =
   | Lconst of constant
