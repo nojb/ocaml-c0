@@ -511,3 +511,7 @@ let report_error ppf loc = function
     Location.report_error loc "this record field's name should be '%s', is '%s'" expected found
   | Int_or_string_expr_expected t ->
     Location.report_error loc "'string' or 'int' expr expected, found '%a'" Types.print t
+  | Pointer_expr_expected t ->
+    Location.report_error loc "pointer expr expected, found '%a'" Types.print t
+  | Illegal_large_type t ->
+    Location.report_error loc "illegal large type '%a'" Types.print t
