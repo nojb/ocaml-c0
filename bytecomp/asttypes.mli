@@ -37,6 +37,10 @@ type arith_operator =
 (*   | Lop_and *)
 (*   | Lop_or *)
 
+type asnop =
+  | ArithAssign of arith_operator
+  | Assign
+
 type binary_operator =
   | Bop_arith of arith_operator
   (* | Bop_logic of logic_operator *)

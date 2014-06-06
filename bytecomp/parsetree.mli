@@ -26,10 +26,6 @@ type 'a loc = {
   loc : Location.t
 }
 
-type asnop =
-  | ArithAssign of arith_operator
-  | Assign
-
 type tp =
   | Ptyp_bool
   | Ptyp_char
