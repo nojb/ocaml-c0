@@ -79,16 +79,6 @@ let rec discard_dead_code cont =
   else
     cont
 
-type function_to_compile = {
-  params : Ident.t list;
-  body : lambda;
-  level : int;
-  label : label;
-  env : env
-}
-
-let functions_to_compile : function_to_compile Stack.t = Stack.create ()
-
 let comp_primitive = function
   | Paddint -> Kaddint
   | Psubint -> Ksubint
