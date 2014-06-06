@@ -36,7 +36,7 @@ let rec lvalue pos lv op e =
 
 let const_true = mkdummyloc (Pexp_const (Const_bool true))
 let const_false = mkdummyloc (Pexp_const (Const_bool false))
-let const_zero = mkdummyloc (Pexp_const (Const_int 0n))
+let const_int n = mkdummyloc (Pexp_const (Const_int (Nativeint.of_int n)))
 %}
 
 %token ALLOC
@@ -311,9 +311,9 @@ simple:
     lv = expr op = asnop e = expr
     { lvalue 1 lv.txt op e }
   | expr PLUSPLUS
-    { lvalue 1 $1.txt (ArithAssign Aop_add) const_zero }
+    { lvalue 1 $1.txt (ArithAssign Aop_add) (const_int 1) }
   | expr MINUSMINUS
-    { lvalue 1 $1.txt (ArithAssign Aop_sub) const_zero }
+    { lvalue 1 $1.txt (ArithAssign Aop_sub) (const_int 1) }
   | expr
     { Pstm_expr $1 }
   ;
