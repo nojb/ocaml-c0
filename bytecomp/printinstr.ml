@@ -49,6 +49,7 @@ let instruction ppf = function
   | Kreturn n -> fprintf ppf "\treturn %i" n
   | Kcall lbl -> fprintf ppf "\tcall L%i" lbl
   | Kallocarray sz -> fprintf ppf "\tallocarray %i" sz
+  | Kpush_retaddr lbl -> fprintf ppf "\tpush_retaddr L%i" lbl
                    
 let rec instruction_list ppf = function
   | [] -> ()

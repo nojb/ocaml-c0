@@ -19,40 +19,6 @@
    IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. *)
 
-(** Stack layout (grows downwards):
-
-    argument n
-    argument n-1
-    ...
-    argument 2
-    argument 1
-    saved static link
-    returns address
-    dynamic link (old fp) <- fp, sp at function entry
-    local 1
-    local 2 <- sp
-    garbage
-
-    so argument i is at fp + 2 + i and local i is at fp - i
-
-    returns (lvl, n):
-      pc <- *(fp-1);
-      fp <- *fp;
-      D[lvl] <- *(fp-2)
-      sp -= n + 3
-
-    call n, L:
-      *++sp = D[n];
-      *++sp = pc;
-      *++sp = fp;
-      fp <- sp;
-      D[n] <- fp;
-      pc <- L
-
-    access (i, j):
-      a <- *(D[i] + j)
-*)
-
 open Asttypes
 open Lambda
 open Instruct
@@ -155,12 +121,14 @@ let rec comp_expr env e sz lexit cont =
     comp_binary_test env e1 e2 e3 sz lexit cont
   | Lprim (p, args) ->
     comp_args env args sz lexit (comp_primitive p :: cont)
-  | Lcall (f, []) -> (* FIXME ? *)
+  | Lcall (f, []) ->
     let lbl = find f env in
-    Kcall lbl :: cont
-  | Lcall (f, el) -> (* FIXME ? *)
+    let lbl_cont, cont = label_code cont in
+    Kpush_retaddr lbl_cont :: Kcall lbl :: cont
+  | Lcall (f, el) ->
     let lbl = find f env in
-    comp_args env el sz lexit (Kpush :: Kcall lbl :: cont)
+    let lbl_cont, cont = label_code cont in
+    Kpush_retaddr lbl_cont :: comp_args env el sz lexit (Kpush :: Kcall lbl :: cont)
   | Lloop e ->
     let lbl = new_label () in
     Klabel lbl :: comp_expr env e sz lexit (Kbranch lbl :: discard_dead_code cont)
@@ -176,6 +144,10 @@ let rec comp_expr env e sz lexit cont =
   | Ldef (id, e1, e2) ->
     comp_expr env e1 sz lexit
       (Kpush :: comp_expr (add_var id sz env) e2 (sz+1) lexit (add_pop 1 cont))
+  | Lreturn None ->
+    Kreturn sz :: discard_dead_code cont
+  | Lreturn (Some e) ->
+    comp_expr env e sz lexit (Kreturn sz :: discard_dead_code cont)
 
 and comp_args env argl sz lexit cont =
   comp_expr_list env (List.rev argl) sz lexit cont
@@ -214,7 +186,3 @@ let compile_program fns =
       IdentMap.empty fns
   in
   List.fold_left (fun cont (lbl, fn) -> comp_function env lbl fn cont) [Kstop] fns
-  (* let prog = comp_expr IdentMap.empty expr 0 [] [Kstop] in *)
-  (* let label, prog = label_code prog in *)
-  (* Kcall label :: Kstop :: (\* comp_remainder *\) prog *)
-  (* prog *)
