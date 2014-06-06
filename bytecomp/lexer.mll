@@ -21,6 +21,7 @@ let keyword_table =
     "if", IF;
     "while", WHILE;
     "return", RETURN;
+    "bool", BOOL;
     "int", INT;
     "char", CHAR;
     "string", STRING;
