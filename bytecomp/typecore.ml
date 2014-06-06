@@ -389,7 +389,7 @@ let rec stmt rt venv tenv inloop s =
   | Pstm_assert e ->
     let lam = expr_with_type Tbool venv tenv e in
     let lnum = e.loc.Location.loc_start.Lexing.pos_lnum in
-    Lprim (Passert lnum, [lam])
+    Lifthenelse (lam, Lprim (Perror lnum, [Lconst (Const_string "Assertion failed")]), const_int 0)
   | Pstm_error e ->
     let lam = expr_with_type Tstring venv tenv e in
     let lnum = e.loc.Location.loc_start.Lexing.pos_lnum in

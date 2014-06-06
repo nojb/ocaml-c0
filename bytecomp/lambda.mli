@@ -32,11 +32,6 @@ type primitive =
   | Pintcomp of comparison
   | Pload
   | Pstore
-  (* | Pgetfield of int *)
-  (* | Psetfield of asnop * int *)
-  (* | Pget of int * int *)
-  (* | Pset of int * int *)
-  | Passert of int
   | Perror of int
     
 type lambda =

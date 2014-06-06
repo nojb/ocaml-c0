@@ -34,7 +34,6 @@ let primitive ppf = function
   | Pintcomp op -> fprintf ppf "%s" (string_of_binary_operator (Bop_cmp op))
   | Pload -> fprintf ppf "load"
   | Pstore -> fprintf ppf "store"
-  | Passert l -> fprintf ppf "assert %i" l
   | Perror l -> fprintf ppf "error %i" l
 
 let rec lambda ppf = function
