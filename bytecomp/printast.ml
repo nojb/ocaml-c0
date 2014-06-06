@@ -157,8 +157,8 @@ let rec expr i ppf e =
     line i ppf "Pexp_get\n";
     expr i ppf e1;
     expr i ppf e2
-  | Pexp_load e ->
-    line i ppf "Pexp_load\n";
+  | Pexp_getptr e ->
+    line i ppf "Pexp_getptr\n";
     expr i ppf e
   | Pexp_alloc t ->
     line i ppf "Pexp_alloc\n";
@@ -186,8 +186,8 @@ let rec stmt i ppf s =
     expr i ppf e1;
     expr i ppf e2;
     expr i ppf e3
-  | Pstm_store (e1, op, e2) ->
-    line i ppf "Pstm_store %S\n" (string_of_asnop op);
+  | Pstm_setptr (e1, op, e2) ->
+    line i ppf "Pstm_setptr %S\n" (string_of_asnop op);
     expr i ppf e1;
     expr i ppf e2
   | Pstm_expr e ->

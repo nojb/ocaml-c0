@@ -31,7 +31,7 @@ let rec lvalue pos lv op e =
   | Pexp_ident id -> Pstm_assign (id, op, e)
   | Pexp_getfield (e1, id) -> Pstm_setfield (e1, id, op, e)
   | Pexp_get (e1, e2) -> Pstm_set (e1, e2, op, e)
-  | Pexp_load e1 -> Pstm_store (e1, op, e)
+  | Pexp_getptr e1 -> Pstm_setptr (e1, op, e)
   | _ -> expecting pos "lvalue"
 
 let const_true = mkdummyloc (Pexp_const (Const_bool true))
@@ -261,13 +261,13 @@ expr:
   | expr DOT ident_or_fail
     { mkloc (Pexp_getfield ($1, $3)) }
   | expr ARROW ident_or_fail
-    { mkloc (Pexp_getfield (mkloc (Pexp_load $1), $3)) }
+    { mkloc (Pexp_getfield (mkloc (Pexp_getptr $1), $3)) }
   | expr LBRACKET expr RBRACKET
     { mkloc (Pexp_get ($1, $3)) }
   | expr LBRACKET expr error
     { unclosed "[" 2 "]" 4 }
   | STAR expr %prec prec_unary_op
-    { mkloc (Pexp_load $2) }
+    { mkloc (Pexp_getptr $2) }
   | ALLOC inparen_or_fail(tp)
     { mkloc (Pexp_alloc $2) }
   | alloc_array

@@ -231,7 +231,7 @@ let rec expr venv tenv e =
     let iexp = expr_with_type Tint venv tenv e2 in
     let lnum = e2.loc.Location.loc_start.Lexing.pos_lnum in
     load_if_small elty aexp (Lprim (Pmulint, [iexp; const_int tsz])), elty
-  | Pexp_load e ->
+  | Pexp_getptr e ->
     let e, t = pointer_expr venv tenv e in
     load_if_small t e (const_int 0), t
   (* | Pexp_binop (e1, Bop_arith op, e2) -> *)
@@ -372,13 +372,13 @@ let rec stmt venv tenv inloop s =
     let oexp = expr_with_type elty venv tenv e3 in
     let lnum = e2.loc.Location.loc_start.Lexing.pos_lnum in
     Lprim (Pstore, [aexp; iexp; oexp])
-  | Pstm_store (e1, ArithAssign op, e2) ->
+  | Pstm_setptr (e1, ArithAssign op, e2) ->
     let e1, t = pointer_expr venv tenv e1 in
     (* FIXME check t = Tint *)
     let e2 = expr_with_type t venv tenv e2 in
     let ptr = Ident.fresh "ptr" in
     Ldef (ptr, e1, Lprim (Pstore, [Lident ptr; const_int 0; Lprim (comp_arithop op, [Lident ptr; e2])]))
-  | Pstm_store (e1, Assign, e2) ->
+  | Pstm_setptr (e1, Assign, e2) ->
     let e1, t = pointer_expr venv tenv e1 in
     if is_large t then raise (Error (e2.loc, Illegal_large_type t)); (* FIXME loc *)
     let e2 = expr_with_type t venv tenv e2 in
