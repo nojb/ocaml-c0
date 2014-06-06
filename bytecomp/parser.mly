@@ -39,77 +39,77 @@ let const_false = mkdummyloc (Pexp_const (Const_bool false))
 let const_zero = mkdummyloc (Pexp_const (Const_int 0n))
 %}
 
+%token ALLOC
+%token ALLOC_ARRAY
 %token AMPERSAND
+%token AMPERSANDAMPERSAND
+%token AMPERSANDEQUAL
+%token ARROW
+%token ASSERT
+%token BANG
+%token BANGEQUAL
 %token BAR
+%token BARBAR
+%token BAREQUAL
+%token BOOL
 %token BREAK
+%token CARET
+%token CARETEQUAL
+%token CHAR
+%token <char> CHARLIT
 %token COLON
 %token COMMA
+%token CONTINUE
 %token DOT
 %token ELSE
 %token EOF
 %token EQUAL
+%token EQUALEQUAL
+%token ERROR
+%token FALSE
 %token FOR
 %token GREATER
 %token GREATEREQUAL
+%token GREATERGREATER
+%token GREATERGREATEREQUAL
 %token <string> IDENT
 %token IF
-%token <nativeint> INTLIT
-%token <char> CHARLIT
-%token TRUE
-%token FALSE
-%token TILDE
-%token BANG
 %token INT
-%token BOOL
-%token CHAR
-%token STRING
-(* %token VOID *)
+%token <nativeint> INTLIT
 %token LBRACE
 %token LBRACKET
 %token LESS
 %token LESSEQUAL
+%token LESSLESS
+%token LESSLESSEQUAL
 %token LPAREN
 %token MINUS
+%token MINUSEQUAL
+%token MINUSMINUS
+%token NULL
+%token PERCENT
+%token PERCENTEQUAL
 %token PLUS
+%token PLUSEQUAL
+%token PLUSPLUS
+%token QUESTION
 %token RBRACE
 %token RBRACKET
+%token RETURN
 %token RPAREN
 %token SEMI
 %token SLASH
-%token STAR
-%token <string> STRINGLIT
-%token WHILE
-%token LESSLESSEQUAL
-%token GREATERGREATEREQUAL
-%token PLUSEQUAL
-%token MINUSEQUAL
-%token STAREQUAL
 %token SLASHEQUAL
-%token PERCENT
-%token PERCENTEQUAL
-%token RETURN
-%token EQUALEQUAL
-%token BANGEQUAL
-%token BARBAR
-%token AMPERSANDAMPERSAND
-%token LESSLESS
-%token GREATERGREATER
-%token CARET
-%token BAREQUAL
-%token AMPERSANDEQUAL
-%token QUESTION
-%token PLUSPLUS
-%token MINUSMINUS
-%token ERROR
-%token ASSERT
+%token STAR
+%token STAREQUAL
+%token STRING
+%token <string> STRINGLIT
 %token STRUCT
-%token ALLOC
-%token ALLOC_ARRAY
-%token CARETEQUAL
-%token CONTINUE
-%token ARROW
-%token NULL
+%token TILDE
+%token TRUE
 %token <string> TYPE_IDENT
+%token VOID
+%token WHILE
 
 %type <Parsetree.stmt> program
 %start program
