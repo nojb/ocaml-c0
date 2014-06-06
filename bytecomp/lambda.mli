@@ -32,17 +32,17 @@ type primitive =
   | Pintcomp of comparison
   | Pload
   | Pstore
-  | Pgetfield of int
-  | Psetfield of int
-  | Pget of int
-  | Pset of int
+  (* | Pgetfield of int *)
+  (* | Psetfield of asnop * int *)
+  (* | Pget of int * int *)
+  (* | Pset of int * int *)
   | Passert of int
   | Perror of int
     
 type lambda =
   | Lconst of constant
   | Lident of Ident.t
-  | Lassign of Ident.t * asnop * lambda
+  | Lassign of Ident.t * lambda
   | Lifthenelse of lambda * lambda * lambda
   | Lprim of primitive * lambda list
   | Lcall of Ident.t * lambda list

@@ -27,10 +27,8 @@ let instruction ppf = function
   | Kconst cst -> fprintf ppf "\tconst %a" Asttypes.print_constant cst
   | Kaccess n -> fprintf ppf "\taccess %i" n
   | Kassign n -> fprintf ppf "\tassign %i" n
-  | Kget l -> fprintf ppf "\tget %i" l
-  | Kset l -> fprintf ppf "\tset %i" l
-  | Kgetfield n -> fprintf ppf "\tgetfield %i" n
-  | Ksetfield n -> fprintf ppf "\tsetfield %i" n
+  | Kload -> fprintf ppf "\tload"
+  | Kstore -> fprintf ppf "\tstore"
   | Kpush -> fprintf ppf "\tpush"
   | Kpop n -> fprintf ppf "\tpop %i" n
   | Kbranch lbl -> fprintf ppf "\tbranch L%i" lbl

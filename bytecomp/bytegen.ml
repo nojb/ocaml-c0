@@ -130,11 +130,10 @@ let comp_primitive p args =
   | Psubint -> Ksubint
   | Paddint -> Kaddint
   | Pnegint -> Knegint
-  | Pget l -> Kget l
-  | Pset l -> Kset l
-  | Pgetfield i -> Kgetfield i
-  | Psetfield i -> Ksetfield i
+  | Pload -> Kload
+  | Pstore -> Kstore
   | Pallocarray sz -> Kallocarray sz
+  | _ -> failwith "comp_primitive: not implemented"
 
 let comp_arithop = function
   | Aop_add -> Kaddint
@@ -149,13 +148,9 @@ let rec comp_expr env e sz lexit cont =
   | Lident id ->
     let pos = find id env in
     Kaccess (sz - pos) :: cont
-  | Lassign (id, Assign, e) ->
+  | Lassign (id, e) ->
     let pos = find id env in
     comp_expr env e sz lexit (Kassign (sz - pos) :: cont)
-  | Lassign (id, ArithAssign op, e) ->
-    let pos = find id env in
-    Kaccess (sz - pos) :: Kpush :: comp_expr env e (sz+1) lexit
-      (comp_arithop op :: Kassign (sz - pos) :: cont)
   | Lifthenelse (e1, e2, e3) ->
     comp_binary_test env e1 e2 e3 sz lexit cont
   | Lprim (p, args) ->

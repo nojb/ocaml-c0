@@ -34,10 +34,6 @@ let primitive ppf = function
   | Pintcomp op -> fprintf ppf "%s" (string_of_binary_operator (Bop_cmp op))
   | Pload -> fprintf ppf "load"
   | Pstore -> fprintf ppf "store"
-  | Pgetfield i -> fprintf ppf "getfield %i" i
-  | Psetfield i -> fprintf ppf "setfield %i" i
-  | Pset l -> fprintf ppf "set %i" l
-  | Pget l -> fprintf ppf "get %i" l
   | Passert l -> fprintf ppf "assert %i" l
   | Perror l -> fprintf ppf "error %i" l
 
@@ -46,7 +42,7 @@ let rec lambda ppf = function
     print_constant ppf cst
   | Lident id ->
     Ident.print ppf id
-  | Lassign (id, _, e) ->
+  | Lassign (id, e) ->
     fprintf ppf "@[<2>(assign@ %a@ %a)@]" Ident.print id lambda e
   | Lifthenelse (e1, e2, e3) ->
     fprintf ppf "@[<2>(if@ %a@ %a@ %a)@]" lambda e1 lambda e2 lambda e3

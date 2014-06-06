@@ -28,10 +28,12 @@ type instruction =
   | Kconst of constant
   | Kaccess of int
   | Kassign of int
-  | Kget of int
-  | Kset of int
-  | Kgetfield of int
-  | Ksetfield of int
+  | Kload
+  | Kstore
+  (* | Kget of int * int *)
+  (* | Kset of int * int *)
+  (* | Kgetfield of int *)
+  (* | Ksetfield of int *)
   | Kpush
   | Kpop of int
   | Kbranch of label
