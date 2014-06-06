@@ -319,6 +319,7 @@ let rec stmt rt venv tenv inloop s =
     let e1, sid = struct_expr venv tenv e1 in
     let t, i = index_of tenv sid fid in
     (* FIXME check t = Tint *)
+    if t <> Tint then raise (Error (fid.loc, Type_mismatch (t, Tint)));
     let e2 = expr_with_type t venv tenv e2 in
     let str = Ident.fresh "str" in
     Ldef (str, e1, Lprim (Pstore, [Lident str; const_int i; Lprim (comp_arithop op, [Lident str; e2])]))
@@ -330,6 +331,7 @@ let rec stmt rt venv tenv inloop s =
     Lprim (Pstore, [e1; const_int i; e2])
   | Pstm_set (e1, e2, ArithAssign op, e3) ->
     let aexp, elty = array_expr venv tenv e1 in
+    if elty <> Tint then raise (Error (e1.loc, Type_mismatch (elty, Tint)));
     (* FIXME check elty = Tint *)
     let tsz = size_of tenv elty in
     let iexp = expr_with_type Tint venv tenv e2 in
@@ -351,11 +353,12 @@ let rec stmt rt venv tenv inloop s =
     let lnum = e2.loc.Location.loc_start.Lexing.pos_lnum in
     Lprim (Pstore, [aexp; iexp; oexp])
   | Pstm_setptr (e1, ArithAssign op, e2) ->
-    let e1, t = pointer_expr venv tenv e1 in
+    let e11, t = pointer_expr venv tenv e1 in
+    if t <> Tint then raise (Error (e1.loc, Type_mismatch (t, Tint)));
     (* FIXME check t = Tint *)
     let e2 = expr_with_type t venv tenv e2 in
     let ptr = Ident.fresh "ptr" in
-    Ldef (ptr, e1, Lprim (Pstore, [Lident ptr; const_int 0; Lprim (comp_arithop op, [Lident ptr; e2])]))
+    Ldef (ptr, e11, Lprim (Pstore, [Lident ptr; const_int 0; Lprim (comp_arithop op, [Lident ptr; e2])]))
   | Pstm_setptr (e1, Assign, e2) ->
     let e1, t = pointer_expr venv tenv e1 in
     if is_large t then raise (Error (e2.loc, Illegal_large_type t)); (* FIXME loc *)
