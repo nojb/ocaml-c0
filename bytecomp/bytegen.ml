@@ -53,6 +53,7 @@
       a <- *(D[i] + j)
 *)
 
+open Asttypes
 open Lambda
 open Instruct
 
@@ -135,6 +136,11 @@ let comp_primitive p args =
   | Psetfield i -> Ksetfield i
   | Pallocarray sz -> Kallocarray sz
 
+let comp_arithop = function
+  | Aop_add -> Kaddint
+  | Aop_sub -> Ksubint
+  | Aop_mul -> Kmulint
+
 let rec comp_expr env e sz lexit cont =
   if sz > !max_stack_used then max_stack_used := sz;
   match e with
@@ -143,9 +149,13 @@ let rec comp_expr env e sz lexit cont =
   | Lident id ->
     let pos = find id env in
     Kaccess (sz - pos) :: cont
-  | Lassign (id, e) ->
+  | Lassign (id, Assign, e) ->
     let pos = find id env in
     comp_expr env e sz lexit (Kassign (sz - pos) :: cont)
+  | Lassign (id, ArithAssign op, e) ->
+    let pos = find id env in
+    Kaccess (sz - pos) :: Kpush :: comp_expr env e (sz+1) lexit
+      (comp_arithop op :: Kassign (sz - pos) :: cont)
   | Lifthenelse (e1, e2, e3) ->
     comp_binary_test env e1 e2 e3 sz lexit cont
   | Lprim (p, args) ->
@@ -179,7 +189,7 @@ let rec comp_expr env e sz lexit cont =
   (*     Stack.push to_compile functions_to_compile *)
   (*   in *)
   (*   List.iter2 comp_fun fns labels; *)
-(*   comp_expr env e lvl sz break cont *)    
+(*   comp_expr env e lvl sz break cont *)
 
 and comp_args env argl sz lexit cont =
   comp_expr_list env (List.rev argl) sz lexit cont

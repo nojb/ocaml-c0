@@ -42,7 +42,7 @@ type primitive =
 type lambda =
   | Lconst of constant
   | Lident of Ident.t
-  | Lassign of Ident.t * lambda
+  | Lassign of Ident.t * asnop * lambda
   | Lifthenelse of lambda * lambda * lambda
   | Lprim of primitive * lambda list
   | Lcall of Ident.t * lambda list

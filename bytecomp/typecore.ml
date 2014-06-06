@@ -322,7 +322,7 @@ let rec stmt venv tenv inloop s =
     let id1, t = find_var id venv in
     if is_large t then raise (Error (id.loc, Illegal_large_type t));
     let e = expr_with_type t venv tenv e in
-    Lassign (id1, e)
+    Lassign (id1, Assign, e)
   | Pstm_setfield (e1, fid, op, e2) ->
     let e1, sid = struct_expr venv tenv e1 in
     let t, i = index_of tenv sid fid in

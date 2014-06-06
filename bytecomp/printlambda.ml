@@ -46,7 +46,7 @@ let rec lambda ppf = function
     print_constant ppf cst
   | Lident id ->
     Ident.print ppf id
-  | Lassign (id, e) ->
+  | Lassign (id, _, e) ->
     fprintf ppf "@[<2>(assign@ %a@ %a)@]" Ident.print id lambda e
   | Lifthenelse (e1, e2, e3) ->
     fprintf ppf "@[<2>(if@ %a@ %a@ %a)@]" lambda e1 lambda e2 lambda e3
