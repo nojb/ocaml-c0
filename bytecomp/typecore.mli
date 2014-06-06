@@ -48,6 +48,7 @@ type error =
   | Pointer_expr_expected of Types.type_expr
   | Illegal_large_type of Types.type_expr
   | Illegal_continue
+  | Struct_already_defined
 
 exception Error of Location.t * error
 

@@ -15,6 +15,7 @@ exception Error of error * Location.t
 
 let keyword_table =
   create_hashtable 37 [
+    "struct", STRUCT;
     "break", BREAK;
     "else", ELSE;
     "for", FOR;

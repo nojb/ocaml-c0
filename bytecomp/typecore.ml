@@ -51,6 +51,7 @@ type error =
   | Pointer_expr_expected of Types.type_expr
   | Illegal_large_type of Types.type_expr
   | Illegal_continue
+  | Struct_already_defined
       
 exception Error of Location.t * error
 
@@ -139,46 +140,6 @@ let rec tp venv = function
   | Ptyp_struct id -> Tstruct id
   | Ptyp_name id -> find_type id venv
                       
-  (* let typ_name (id, _) = id.txt in *)
-  (* begin match list_has_duplicate typ_name tdecs with *)
-  (*   | Some (a, _) -> raise (Error (a.loc, Repeated_type a.txt)) *)
-  (*   | None -> () *)
-  (* end; *)
-  (* let find_type_or_forward id tenv = *)
-  (*   try Tbl.find id.txt tenv with Not_found -> Tname id *)
-  (* in *)
-  (* let rec get id1 = function *)
-  (*   | Ptyp_name id -> *)
-  (*     find_type_or_forward id tenv *)
-  (*   | Ptyp_record flds -> *)
-  (*     let fld_name (id, _) = id.txt in *)
-  (*     begin match list_has_duplicate fld_name flds with *)
-  (*       | Some (fld, _) -> *)
-  (*         raise (Error (fld.loc, Repeated_field fld.txt)) *)
-  (*       | None -> *)
-  (*         Trecord (id1.txt, List.map (fun (id, t) -> (id.txt, find_type_or_forward t tenv)) flds) *)
-  (*     end *)
-  (*   | Ptyp_array id -> *)
-  (*     Tarray (id1.txt, find_type_or_forward id tenv) *)
-  (* in *)
-  (* let rec fixup tenv seen seen_record = function *)
-  (*   | Tany *)
-  (*   | Tint *)
-  (*   | Tunit *)
-  (*   | Tstring -> () *)
-  (*   | Tname id when List.mem id.txt seen -> *)
-  (*     if not seen_record then raise (Error (id.loc, Bad_recursive_type (List.rev seen))) *)
-  (*   | Tname id -> *)
-  (*     fixup tenv (id.txt :: seen) seen_record (find_type id tenv) *)
-  (*   | Trecord (id, flds) -> *)
-  (*     List.iter (fun (_, t) -> fixup tenv (id :: seen) true t) flds *)
-  (*   | Tarray (id, t) -> *)
-  (*     fixup tenv (id :: seen) seen_record t *)
-  (* in *)
-  (* let tenv = List.fold_left (fun tenv (id, t) -> add_type id (get id t) tenv) tenv tdecs in *)
-  (* List.iter (fun (id, _) -> fixup tenv [] false (find_type id tenv)) tdecs; *)
-  (* tenv *)
-
 let const_int n = Lconst (Const_int (Nativeint.of_int n))
 
 let default_init tenv = function
@@ -434,13 +395,16 @@ let rec stmt rt venv tenv inloop s =
 
 let outfuns : lambda_fun list ref = ref []
 
-let define_struct id fields tenv =
-  assert false
+let define_struct id fields venv tenv =
+  (* FIXME check for field repetitions *)
+  let already_defined = try Tbl.find id.txt tenv <> Unfilled with Not_found -> false in
+  if already_defined then raise (Error (id.loc, Struct_already_defined));
+  Tbl.add id.txt (Filled (List.map (fun (t, id) -> id.txt, tp venv t) fields)) tenv
 
 let defn venv tenv d =
   match d with
   | Pdef_struct (id, fields) ->
-    venv, define_struct id fields tenv
+    venv, define_struct id fields venv tenv
   | Pdef_fun (rt, id, args, body) ->
     (* FIXME check for param repetitions *)    
     let ats = List.map (fun (t, _) -> tp venv t) args in
