@@ -79,6 +79,12 @@ let rec discard_dead_code cont =
   else
     cont
 
+let rec is_tailcall = function
+  | Kreturn _ :: _ -> true
+  | Klabel _ :: c -> is_tailcall c
+  | Kpop _ :: c -> is_tailcall c
+  | _ -> false
+
 let comp_primitive = function
   | Paddint -> Kaddint
   | Psubint -> Ksubint
@@ -114,11 +120,18 @@ let rec comp_expr env e sz lexit cont =
   | Lcall (f, []) ->
     let lbl = find f env in
     let lbl_cont, cont = label_code cont in
-    Kpush_retaddr lbl_cont :: Kcall lbl :: cont
+    if is_tailcall cont then
+      Ktailcall (sz, 0, lbl) :: discard_dead_code cont
+    else
+      Kpush_retaddr lbl_cont :: Kcall lbl :: cont
   | Lcall (f, el) ->
     let lbl = find f env in
-    let lbl_cont, cont = label_code cont in
-    Kpush_retaddr lbl_cont :: comp_args env el sz lexit (Kpush :: Kcall lbl :: cont)
+    if is_tailcall cont then
+      comp_args env el sz lexit
+        (Kpush :: Ktailcall (sz, List.length el, lbl) :: discard_dead_code cont)
+    else
+      let lbl_cont, cont = label_code cont in
+      Kpush_retaddr lbl_cont :: comp_args env el (sz+1) lexit (Kpush :: Kcall lbl :: cont)
   | Lloop e ->
     let lbl = new_label () in
     Klabel lbl :: comp_expr env e sz lexit (Kbranch lbl :: discard_dead_code cont)
