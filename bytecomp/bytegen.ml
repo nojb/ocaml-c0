@@ -226,6 +226,7 @@ let compile_program expr =
   label_counter := 0;
   max_stack_used := 0;
   Stack.clear functions_to_compile;
-  let prog = comp_expr IdentMap.empty expr 0 [] [] in
-  let label, prog = label_code prog in
-  Kcall label :: Kstop :: (* comp_remainder *) prog
+  let prog = comp_expr IdentMap.empty expr 0 [] [Kstop] in
+  (* let label, prog = label_code prog in *)
+  (* Kcall label :: Kstop :: (\* comp_remainder *\) prog *)
+  prog
