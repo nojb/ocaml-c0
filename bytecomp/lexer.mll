@@ -33,7 +33,8 @@ let keyword_table =
     "alloc_array", ALLOC_ARRAY;
     "break", BREAK;
     "continue", CONTINUE;
-    "NULL", NULL
+    "NULL", NULL;
+    "typedef", TYPEDEF
   ]
 
 let string_buff = Buffer.create 64

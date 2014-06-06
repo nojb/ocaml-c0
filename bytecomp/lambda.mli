@@ -53,8 +53,5 @@ type lambda =
   | Ldef of Ident.t * lambda * lambda
   | Lreturn of lambda option
 
-type fundef = {
-  name : Ident.t;
-  params : Ident.t list;
-  body : lambda
-}
+type lambda_fun =
+  Lfun of Ident.t * Ident.t list * lambda

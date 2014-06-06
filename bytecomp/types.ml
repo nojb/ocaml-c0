@@ -20,6 +20,7 @@
    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. *)
 
 type type_expr =
+  | Tvoid
   | Tnull
   | Tbool
   | Tchar
@@ -32,6 +33,7 @@ type type_expr =
 
 let rec equal t1 t2 =
   match t1, t2 with
+  | Tvoid, Tvoid
   | Tstring, Tstring
   | Tint, Tint
   | Tbool, Tbool
@@ -53,6 +55,7 @@ let is_large = function
 open Format
 
 let rec print ppf = function
+  | Tvoid -> fprintf ppf "void"
   | Tint -> fprintf ppf "int"
   | Tstring -> fprintf ppf "string"
   | Tbool -> fprintf ppf "bool"

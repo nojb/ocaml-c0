@@ -22,4 +22,4 @@
 open Format
 open Parsetree
   
-val program : formatter -> stmt -> unit
+val program : formatter -> defn list -> unit

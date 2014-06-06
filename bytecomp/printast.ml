@@ -56,27 +56,12 @@ let option i f ppf = function
     line i ppf "Some\n";
     f (i+1) ppf x
 
-(* let record_type_field i ppf (id, tid) = *)
-(*   line i ppf "%a %a\n" fmt_string_loc id fmt_string_loc tid *)
-
-(* let type_expr i ppf typ = *)
-(*   match typ with *)
-(*   | Ptyp_name id -> *)
-(*     line i ppf "Ptyp_name %a\n" fmt_string_loc id *)
-(*   | Ptyp_record fields -> *)
-(*     line i ppf "Ptyp_record\n"; *)
-(*     list i record_type_field ppf fields *)
-(*   | Ptyp_array id -> *)
-(*     line i ppf "Ptyp_array %a\n" fmt_string_loc id *)
-
-(* let typ_decl i ppf (id, typ) = *)
-(*   string_loc i ppf id; *)
-(*   type_expr (i+1) ppf typ *)
-
 let rec tp i ppf t =
   line i ppf "type\n";
   let i = i+1 in
   match t with
+  | Ptyp_void ->
+    line i ppf "Ptyp_void\n"
   | Ptyp_int ->
     line i ppf "Ptyp_int\n"
   | Ptyp_bool ->
@@ -95,37 +80,6 @@ let rec tp i ppf t =
     line i ppf "Ptyp_struct %a\n" fmt_string_loc id
   | Ptyp_name id ->
     line i ppf "Ptyp_name %a\n" fmt_string_loc id
-
-(* let string_of_arithop = function *)
-(*   | Add -> "+" *)
-(*   | Sub -> "-" *)
-(*   | Mul -> "*" *)
-(*   | Div -> "/" *)
-(*   | Mod -> "%" *)
-(*   | Lsl -> "<<" *)
-(*   | Asr -> ">>" *)
-(*   | And -> "&" *)
-(*   | Or -> "|" *)
-(*   | Xor -> "^" *)
-
-(* let string_of_comparison = function *)
-(*   | Eq -> "==" *)
-(*   | Le -> "<=" *)
-(*   | Ne -> "!=" *)
-(*   | Lt -> "<" *)
-(*   | Ge -> ">=" *)
-(*   | Gt -> ">" *)
-
-(* let string_of_binop = function *)
-(*   | Arith op -> string_of_arithop op *)
-(*   | Cmp c -> string_of_comparison c *)
-(*   | Land -> "&&" *)
-(*   | Lor -> "||" *)
-
-(* let string_of_unop = function *)
-(*   | Not -> "!" *)
-(*   | Lnot -> "~" *)
-(*   | Neg -> "-" *)
 
 let rec expr i ppf e =
   line i ppf "expression %a\n" fmt_location e.loc;
@@ -225,57 +179,17 @@ let rec stmt i ppf s =
   | Pstm_continue ->
     line i ppf "Pstm_continue\n"
       
-  (* | Pexp_get (e1, e2) -> *)
-(*     line i ppf "Pexp_get\n"; *)
-(*     expr i ppf e1; *)
-(*     expr i ppf e2 *)
-(*   | Pexp_set (e1, e2, e3) -> *)
-(*     line i ppf "Pexp_set\n"; *)
-(*     expr i ppf e1; *)
-(*     expr i ppf e2; *)
-(*     expr i ppf e3 *)
-(*   | Pexp_getfield (e, id) -> *)
-(*     line i ppf "Pexp_getfield %a\n" fmt_string_loc id; *)
-(*     expr i ppf e *)
-(*   | Pexp_setfield (e1, id, e2) -> *)
-(*     line i ppf "Pexp_setfield %a\n" fmt_string_loc id; *)
-(*     expr i ppf e1; *)
-(*     expr i ppf e2 *)
-(*   | Pexp_ifthenelse (e1, e2, e3) -> *)
-(*     line i ppf "Pexp_ifthenelse\n"; *)
-(*     expr i ppf e1; *)
-(*     expr i ppf e2; *)
-(*     option i expr ppf e3 *)
-(*   | Pexp_while (e1, e2) -> *)
-(*     line i ppf "Pexp_while\n"; *)
-(*     expr i ppf e1; *)
-(*     expr i ppf e2 *)
 (*   | Pexp_for (id, e1, e2, e3) -> *)
 (*     line i ppf "Pexp_for %a\n" fmt_string_loc id; *)
 (*     expr i ppf e1; *)
 (*     expr i ppf e2; *)
 (*     expr i ppf e3 *)
-(*   | Pexp_sequence (e1, e2) -> *)
-(*     line i ppf "Pexp_sequence\n"; *)
-(*     expr i ppf e1; *)
-(*     expr i ppf e2 *)
 (*   | Pexp_unit -> *)
 (*     line i ppf "Pexp_unit\n" *)
 (*   | Pexp_break -> *)
 (*     line i ppf "Pexp_break\n" *)
 (*   | Pexp_nil -> *)
 (*     line i ppf "Pexp_nil\n" *)
-(*   | Pexp_let (d, e) -> *)
-(*     line i ppf "Pexp_let\n"; *)
-(*     list i decl ppf d; *)
-(*     expr i ppf e *)
-(*   | Pexp_array (id, e1, e2) -> *)
-(*     line i ppf "Pexp_array %a\n" fmt_string_loc id; *)
-(*     expr i ppf e1; *)
-(*     expr i ppf e2 *)
-(*   | Pexp_record (id, fields) -> *)
-(*     line i ppf "Pexp_record %a\n" fmt_string_loc id; *)
-(*     list i record_field ppf fields *)
 (*   | Pexp_call (id, args) -> *)
 (*     line i ppf "Pexp_call %a\n" fmt_string_loc id; *)
 (*     list i expr ppf args *)
@@ -286,42 +200,27 @@ let rec stmt i ppf s =
 (*   | Pexp_unary (op, e) -> *)
 (*     line i ppf "Pexp_unary %S\n" (string_of_unary_operator op); *)
 (*     expr i ppf e *)
+
+let field i ppf (t, id) =
+  line i ppf "<field> %a\n" fmt_string_loc id;
+  tp (i+1) ppf t
   
-(* and record_field i ppf (id, e) = *)
-(*   line i ppf "%a\n" fmt_string_loc id; *)
-(*   expr i ppf e *)
+let defn i ppf d =
+  line i ppf "definition\n";
+  let i=i+1 in
+  match d with
+  | Pdef_struct (id, fields) ->
+    line i ppf "Pdef_struct %a\n" fmt_string_loc id;
+    list i field ppf fields
+  | Pdef_fun (rt, id, args, body) ->
+    line i ppf "Pdef_fun %a\n" fmt_string_loc id;
+    tp i ppf rt;
+    list i field ppf args;
+    stmt i ppf body
+  | Pdef_type (t, id) ->
+    line i ppf "Pdef_type %a\n" fmt_string_loc id;
+    tp i ppf t
 
-(* and decl i ppf d = *)
-(*   line i ppf "declaration %a\n" fmt_location d.loc; *)
-(*   let i = i+1 in *)
-(*   match d.txt with *)
-(*   | Pdec_variable (id, tid, e) -> *)
-(*     line i ppf "Pdec_variable %a\n" fmt_string_loc id; *)
-(*     option i string_loc ppf tid; *)
-(*     expr i ppf e *)
-(*   | Pdec_type typs -> *)
-(*     line i ppf "Pdec_type\n"; *)
-(*     list i typ_decl ppf typs *)
-(*   | Pdec_function fns -> *)
-(*     line i ppf "Pdec_function\n"; *)
-(*     list i fun_decl ppf fns *)
-
-(* and fun_decl i ppf fn = *)
-(*   line i ppf "<function>\n"; *)
-(*   let i=i+1 in *)
-(*   line i ppf "pfun_name = %a\n" fmt_string_loc fn.pfun_name; *)
-(*   line i ppf "pfun_arguments =\n"; *)
-(*   list (i+1) fun_arg ppf fn.pfun_arguments; *)
-(*   line i ppf "pfun_return_type =\n"; *)
-(*   option (i+1) string_loc ppf fn.pfun_return_type; *)
-(*   line i ppf "pfun_body =\n"; *)
-(*   expr (i+1) ppf fn.pfun_body *)
-
-(* and fun_arg i ppf (id, tid) = *)
-(*   line i ppf "<argument>\n"; *)
-(*   let i=i+1 in *)
-(*   string_loc i ppf id; *)
-(*   string_loc i ppf tid *)
-
-let program ppf s =
-  fprintf ppf "@[%a@]" (stmt 0) s
+let program ppf ds =
+  List.iter (defn 0 ppf) ds
+  (* fprintf ppf "@[%a@]" (stmt 0) s *)

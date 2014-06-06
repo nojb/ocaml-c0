@@ -51,7 +51,7 @@ type error =
 
 exception Error of Location.t * error
 
-val program : stmt -> lambda
+val program : defn list -> lambda_fun list
 
 open Format
 

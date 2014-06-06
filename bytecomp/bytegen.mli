@@ -24,4 +24,4 @@ open Instruct
 
 val optimise : bool ref
 
-val compile_program : lambda -> instruction list 
+val compile_program : lambda_fun list -> instruction list 

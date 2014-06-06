@@ -49,21 +49,6 @@ let rec lambda ppf = function
   | Lprim (p, args) ->
     let lams ppf largs = List.iter (fun l -> fprintf ppf "@ %a" lambda l) largs in
     fprintf ppf "@[<2>(%a%a)@]" primitive p lams args
-  (* | Lletrec (fns, e) -> *)
-  (*   let rec prargs ppf = function *)
-  (*     | [] -> () *)
-  (*     | [arg] -> *)
-  (*       Ident.print ppf arg *)
-  (*     | a :: rest -> *)
-  (*       fprintf ppf "%a@ %a" Ident.print a prargs rest *)
-  (*   in *)
-  (*   let aux ppf fns = *)
-  (*     let spc = ref false in *)
-  (*     List.iter (fun (Lfunction (id, args, e)) -> *)
-  (*         if !spc then fprintf ppf "@ " else spc := true; *)
-  (*         fprintf ppf "@[<2>(%a@ @[<2>(fun@ (%a)@ %a)@])@]" Ident.print id prargs args lambda e) fns *)
-  (*   in *)
-  (*   fprintf ppf "@[<2>(letrec@ (@[<hv 1>%a@])@ %a)@]" aux fns lambda e *)
   (* | Llet (id, e1, e2) -> *)
   (*   fprintf ppf "@[<2>(let@ @[<hv 1>(@[<2>%a@ %a@]" Ident.print id lambda e1; *)
   (*   let rec letbody = function *)
@@ -98,5 +83,10 @@ and sequence ppf = function
   | _ as e ->
     lambda ppf e
 
-let program ppf lam =
-  fprintf ppf "@[%a@]@." lambda lam
+let lambda_fun ppf (Lfun (id, args, body)) =
+  let prargs ppf args = List.iter (fun arg -> fprintf ppf "@ %a" Ident.print arg) args in
+  fprintf ppf "@[<2>(define@ (%a%a)@ %a)@]@." Ident.print id
+    prargs args lambda body
+
+let program ppf fns =
+  List.iter (lambda_fun ppf) fns

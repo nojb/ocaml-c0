@@ -20,6 +20,7 @@
    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. *)
 
 type type_expr =
+  | Tvoid
   | Tnull
   | Tbool
   | Tchar

@@ -27,6 +27,7 @@ type 'a loc = {
 }
 
 type tp =
+  | Ptyp_void
   | Ptyp_bool
   | Ptyp_char
   | Ptyp_int
@@ -67,9 +68,11 @@ type stmt =
   | Pstm_break
   | Pstm_continue
 
-type function_definition = {
-  pfun_name : string loc;
-  pfun_arguments : (tp * string loc) list;
-  pfun_return_type : tp option;
-  pfun_body : stmt
-}
+type defn =
+  | Pdef_struct of string loc * (tp * string loc) list
+  | Pdef_fun of tp * string loc * (tp * string loc) list * stmt
+  | Pdef_type of tp * string loc
+
+type decl =
+  | Pdec_fun of tp * string loc * (tp * string loc) list
+  | Pdec_struct of string loc

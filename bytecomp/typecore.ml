@@ -105,7 +105,8 @@ let find_type id venv =
     raise (Error (id.loc, Type_not_found id.txt))
 
 let add_fun id ts t venv =
-  Tbl.add id.txt (Val_fun (ts, t, Ident.fresh id.txt)) venv
+  let id1 = Ident.fresh id.txt in
+  id1, Tbl.add id.txt (Val_fun (ts, t, id1)) venv
 
 let add_type id t venv =
   Tbl.add id.txt (Val_type t) venv
@@ -128,6 +129,7 @@ let index_of tenv sid fid =
     raise (Error (fid.loc, Unfilled_struct sid.txt)) (* FIXME loc *)
 
 let rec tp venv = function
+  | Ptyp_void -> Tvoid
   | Ptyp_bool -> Tbool
   | Ptyp_char -> Tchar
   | Ptyp_int -> Tint
@@ -324,7 +326,7 @@ let comp_arithop = function
   | Aop_mul -> Pmulint
   | Aop_div -> Pdivint
   
-let rec stmt venv tenv inloop s =
+let rec stmt rt venv tenv inloop s =
   match s with
   | Pstm_empty -> const_int 0
   | Pstm_assign (id, ArithAssign op, e) ->
@@ -394,20 +396,26 @@ let rec stmt venv tenv inloop s =
       | None -> Lconst (default_init tenv t)
     in
     let v, venv = add_var id t venv in
-    let s = stmt venv tenv inloop s in
+    let s = stmt rt venv tenv inloop s in
     Ldef (v, e, s)
   | Pstm_ifthenelse (e, s1, s2) ->
     let e = expr_with_type Tbool venv tenv e in
-    let s1 = stmt venv tenv inloop s1 in
-    let s2 = stmt venv tenv inloop s2 in
+    let s1 = stmt rt venv tenv inloop s1 in
+    let s2 = stmt rt venv tenv inloop s2 in
     Lifthenelse (e, s1, s2)
   | Pstm_while (e, s) ->
     let e = expr_with_type Tbool venv tenv e in
-    let s = stmt venv tenv true s in
+    let s = stmt rt venv tenv true s in
     Lblock (Lloop (Lblock (Lifthenelse (e, s, Lexit 1))))
+  | Pstm_return None ->
+    assert (rt = Tvoid); (* FIXME *)
+    Lreturn None
+  | Pstm_return (Some e) ->
+    let e = expr_with_type rt venv tenv e in
+    Lreturn (Some e)
   | Pstm_seq (s1, s2) ->
-    let lam1 = stmt venv tenv inloop s1 in
-    let lam2 = stmt venv tenv inloop s2 in
+    let lam1 = stmt rt venv tenv inloop s1 in
+    let lam2 = stmt rt venv tenv inloop s2 in
     Lseq (lam1, lam2)
   | Pstm_assert e ->
     let lam = expr_with_type Tbool venv tenv e in
@@ -424,45 +432,32 @@ let rec stmt venv tenv inloop s =
     if inloop then Lexit 0
     else raise (Error (Location.dummy, Illegal_continue))
 
-(* and decl (venv : venv) (tenv : tenv) inloop d k = *)
-(*   match d.txt with *)
-(*   | Pdec_type types -> *)
-(*     let tenv = type_declarations tenv types in *)
-(*     k venv tenv *)
-(*   | Pdec_function fns -> *)
-(*     let fun_name fn = fn.pfun_name.txt in *)
-(*     begin match list_has_duplicate fun_name fns with *)
-(*       | Some fn -> raise (Error (d.loc, Repeated_function fn.pfun_name.txt)) *)
-(*       | None -> () *)
-(*     end; *)
-(*     let add venv fn = *)
-(*       let atyps = List.map (fun (_, tid) -> find_type tid tenv) fn.pfun_arguments in *)
-(*       let rtyp = match fn.pfun_return_type with None -> Tunit | Some tid -> find_type tid tenv in *)
-(*       add_fun fn.pfun_name atyps rtyp venv *)
-(*     in *)
-(*     let venv = List.fold_left add venv fns in *)
-(*     let dofun fn = *)
-(*       let atyps, rtyp, kind = find_fun fn.pfun_name venv in *)
-(*       let id = match kind with User id -> id | Primitive _ -> assert false in *)
-(*       let arg_name (id, _) = id.txt in *)
-(*       begin match list_has_duplicate arg_name fn.pfun_arguments with *)
-(*         | Some (id, _) -> raise (Error (id.loc, Repeated_argument id.txt)) *)
-(*         | None -> () *)
-(*       end; *)
-(*       let args = List.map (fun (id, tid) -> *)
-(*           (Ident.fresh id.txt, find_type tid tenv)) fn.pfun_arguments in *)
-(*       let add_arg venv (id, typ) = Tbl.add (Ident.name id) (Val_var (typ, Mutable, id)) venv in *)
-(*       let venv = List.fold_left add_arg venv args in *)
-(*       let e = expr_with_type rtyp venv tenv false fn.pfun_body in *)
-(*       Lfunction (id, List.map fst args, e) *)
-(*     in *)
-(*     let fns = List.map dofun fns in *)
-(*     let e, t = k venv tenv in *)
-(*     Lletrec (fns, e), t *)
+let outfuns : lambda_fun list ref = ref []
 
-let program e =
-  let lam = stmt Tbl.empty Tbl.empty false e in
-  lam
+let define_struct id fields tenv =
+  assert false
+
+let defn venv tenv d =
+  match d with
+  | Pdef_struct (id, fields) ->
+    venv, define_struct id fields tenv
+  | Pdef_fun (rt, id, args, body) ->
+    (* FIXME check for param repetitions *)    
+    let ats = List.map (fun (t, _) -> tp venv t) args in
+    let rt = tp venv rt in
+    let id, venv0 = add_fun id ats rt venv in
+    let ids, venv = List.fold_left2 (fun (ids, venv) (_, id) t ->
+        let id, venv = add_var id t venv in id :: ids, venv) ([], venv0) args ats in
+    let body = stmt rt venv tenv false body in
+    outfuns := Lfun (id, List.rev ids, body) :: !outfuns;
+    venv0, tenv
+  | Pdef_type (t, id) ->
+    add_type id (tp venv t) venv, tenv
+  
+let program ds =
+  outfuns := [];
+  let _ = List.fold_left (fun (venv, tenv) d -> defn venv tenv d) (Tbl.empty, Tbl.empty) ds in
+  List.rev !outfuns
 
 open Format
 

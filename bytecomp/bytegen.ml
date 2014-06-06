@@ -155,7 +155,10 @@ let rec comp_expr env e sz lexit cont =
     comp_binary_test env e1 e2 e3 sz lexit cont
   | Lprim (p, args) ->
     comp_args env args sz lexit (comp_primitive p args :: cont)
-  | Lcall (f, el) -> (* FIXME *)
+  | Lcall (f, []) -> (* FIXME ? *)
+    let lbl = find f env in
+    Kcall lbl :: cont
+  | Lcall (f, el) -> (* FIXME ? *)
     let lbl = find f env in
     comp_args env el sz lexit (Kpush :: Kcall lbl :: cont)
   | Lloop e ->
@@ -173,18 +176,6 @@ let rec comp_expr env e sz lexit cont =
   | Ldef (id, e1, e2) ->
     comp_expr env e1 sz lexit
       (Kpush :: comp_expr (add_var id sz env) e2 (sz+1) lexit (add_pop 1 cont))
-  (* | Lletrec (fns, e) -> *)
-  (*   let labels = List.map (fun _ -> new_label ()) fns in *)
-  (*   let funid (Lfunction (id, _, _)) = id in *)
-  (*   let env = *)
-  (*     List.fold_right2 (fun fn lbl env -> add_var (funid fn) (lvl+1) lbl env) fns labels env *)
-  (*   in *)
-  (*   let comp_fun (Lfunction (_, params, body)) label = *)
-  (*     let to_compile = { params; body; level = lvl+1; label; env } in *)
-  (*     Stack.push to_compile functions_to_compile *)
-  (*   in *)
-  (*   List.iter2 comp_fun fns labels; *)
-(*   comp_expr env e lvl sz break cont *)
 
 and comp_args env argl sz lexit cont =
   comp_expr_list env (List.rev argl) sz lexit cont
@@ -205,28 +196,25 @@ and comp_binary_test env cond ifso ifnot sz lexit cont =
   comp_expr env cond sz lexit
     (Kbranchifnot lbl_ifno :: comp_expr env ifso sz lexit (branch_to lbl_cont ifno))
 
-(* let comp_function fc cont = *)
-(*   let arity = List.length fc.params in *)
-(*   let rec positions env pos = function *)
-(*     | [] -> env *)
-(*     | id :: rem -> IdentMap.add id (fc.level, pos) (positions env (pos-1) rem) *)
-(*   in *)
-(*   let env = positions fc.env (-3) fc.params in *)
-(*   let cont = comp_expr env fc.body fc.level 1 None (Kreturn arity :: cont) in *)
-(*   Klabel fc.label :: cont *)
-
-(* let comp_remainder cont = *)
-(*   let rec loop cont = *)
-(*     if Stack.is_empty functions_to_compile then cont *)
-(*     else loop (comp_function (Stack.pop functions_to_compile) cont) *)
-(*   in *)
-(*   loop cont *)
-
-let compile_program expr =
+let comp_function env lbl (Lfun (id, args, body)) cont =
+  let arity = List.length args in
+  let rec positions env pos = function
+    | [] -> env
+    | id :: rem -> IdentMap.add id pos (positions env (pos+1) rem)
+  in
+  let env = positions env 0 args in
+  Klabel lbl :: comp_expr env body arity [] cont
+  
+let compile_program fns =
   label_counter := 0;
   max_stack_used := 0;
-  Stack.clear functions_to_compile;
-  let prog = comp_expr IdentMap.empty expr 0 [] [Kstop] in
+  let fns = List.map (fun fn -> new_label (), fn) fns in
+  let env =
+    List.fold_left (fun env (lbl, Lfun (id, _, _)) -> IdentMap.add id lbl env)
+      IdentMap.empty fns
+  in
+  List.fold_left (fun cont (lbl, fn) -> comp_function env lbl fn cont) [Kstop] fns
+  (* let prog = comp_expr IdentMap.empty expr 0 [] [Kstop] in *)
   (* let label, prog = label_code prog in *)
   (* Kcall label :: Kstop :: (\* comp_remainder *\) prog *)
-  prog
+  (* prog *)

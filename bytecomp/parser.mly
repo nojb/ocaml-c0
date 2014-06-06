@@ -107,11 +107,12 @@ let const_zero = mkdummyloc (Pexp_const (Const_int 0n))
 %token STRUCT
 %token TILDE
 %token TRUE
+%token TYPEDEF
 %token <string> TYPE_IDENT
 %token VOID
 %token WHILE
 
-%type <Parsetree.stmt> program
+%type <Parsetree.defn list> program
 %start program
 
 %right QUESTION
@@ -130,9 +131,9 @@ let const_zero = mkdummyloc (Pexp_const (Const_int 0n))
 
 %%
 
-program:
-    stmt EOF
-    { $1 }
+program
+  : x = list(gdefn) EOF
+    { x }
   ;
 
 ident:
@@ -425,3 +426,36 @@ stmtm:
 (*       { pfun_name = $2; pfun_arguments = $4; pfun_return_type = $6; pfun_body = $8 } *)
 (*     } *)
 (*   ; *)
+
+fields
+  : x = list(terminated(pair(tp, ident), SEMI))
+    { x }
+  ;
+
+params
+  : x = separated_list(COMMA, pair(tp, ident))
+    { x }
+  ;
+
+return_type
+  : VOID
+    { Ptyp_void }
+  | tp
+    { $1 }
+  ;
+
+gdefn
+  : STRUCT ident LBRACE fields RBRACE semi_or_fail
+    { Pdef_struct ($2, $4) }
+  | return_type ident LPAREN params RPAREN block
+    { Pdef_fun ($1, $2, $4, $6) }
+  | TYPEDEF tp ident semi_or_fail
+    { Pdef_type ($2, $3) }
+  ;
+
+gdecl
+  : STRUCT ident SEMI
+    { Pdec_struct $2 }
+  | tp ident LPAREN params RPAREN SEMI
+    { Pdec_fun ($1, $2, $4) }
+  ;
