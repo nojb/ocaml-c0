@@ -221,26 +221,26 @@ let rec expr venv tenv e =
     let e1 = expr_with_type Tint venv tenv e1 in
     let e2 = expr_with_type Tint venv tenv e2 in
     Lprim (comp_arithop op, [e1; e2]), Tint
-  (* | Pexp_binop (e1, Bop_cmp op, e2) -> *)
-  (*   begin match op with *)
-  (*     | Ceq *)
-  (*     | Cneq -> *)
-  (*       let e1, t = expr venv tenv e1 in *)
-  (*       begin match t with *)
-  (*         | Tbool *)
-  (*         | Tchar *)
-  (*         | Tint *)
-  (*         | Tpointer _ -> *)
-  (*           let e2 = expr_with_type t venv tenv e2 in *)
-  (*           Lprim (Pintcomp op, [e1; e2]) *)
-  (*         | _ -> *)
-  (*           failwith "eq neq" *)
-  (*       end *)
-  (*     | _ -> *)
-  (*       let e1 = expr_with_type Tint venv tenv e1 in *)
-  (*       let e2 = expr_with_type Tint venv tenv e2 in *)
-  (*       Lprim (Pintcomp op, [e1; e2]), Tbool *)
-  (*   end *)
+  | Pexp_binop (e1, Bop_cmp op, e2) ->
+    begin match op with
+      | Ceq
+      | Cneq ->
+        let e1, t = expr venv tenv e1 in
+        begin match t with
+          | Tbool
+          | Tchar
+          | Tint
+          | Tpointer _ ->
+            let e2 = expr_with_type t venv tenv e2 in
+            Lprim (Pintcomp op, [e1; e2]), Tbool
+          | _ ->
+            failwith "eq neq"
+        end
+      | _ ->
+        let e1 = expr_with_type Tint venv tenv e1 in
+        let e2 = expr_with_type Tint venv tenv e2 in
+        Lprim (Pintcomp op, [e1; e2]), Tbool
+    end
   (* | Pexp_unop (Uop_minus, e) -> *)
   (*   let e = expr_with_type Tint venv tenv inloop e in *)
   (*   Lprim (Pnegint, [e]), Tint *)
