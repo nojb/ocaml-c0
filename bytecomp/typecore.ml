@@ -153,6 +153,7 @@ let default_init tenv = function
   | _ -> assert false
 
 let rec size_of tenv = function
+  | Tvoid -> 0
   | Tbool
   | Tchar
   | Tnull
