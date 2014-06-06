@@ -177,8 +177,6 @@ let mul e1 e2 =
   | Lconst (Const_int n), Lconst (Const_int m) -> Lconst (Const_int (Nativeint.mul n m))
   | Lconst (Const_int 1n), e1
   | e1, Lconst (Const_int 1n) -> e1
-  | Lconst (Const_int 0n), _
-  | _, Lconst (Const_int 0n) -> Lconst (Const_int 0n)
   | e1, e2 -> Lprim (Pmulint, [e1; e2])
 
 let add e1 e2 =
