@@ -172,8 +172,24 @@ let rec size_of tenv = function
     | Not_found ->
       raise (Error (id.loc, Unfilled_struct id.txt)) (* FIXME loc *)
 
+let mul e1 e2 =
+  match e1, e2 with
+  | Lconst (Const_int n), Lconst (Const_int m) -> Lconst (Const_int (Nativeint.mul n m))
+  | Lconst (Const_int 1n), e1
+  | e1, Lconst (Const_int 1n) -> e1
+  | Lconst (Const_int 0n), _
+  | _, Lconst (Const_int 0n) -> Lconst (Const_int 0n)
+  | e1, e2 -> Lprim (Pmulint, [e1; e2])
+
+let add e1 e2 =
+  match e1, e2 with
+  | Lconst (Const_int n), Lconst (Const_int m) -> Lconst (Const_int (Nativeint.add n m))
+  | e1, Lconst (Const_int 0n)
+  | Lconst (Const_int 0n), e1 -> e1
+  | e1, e2 -> Lprim (Paddint, [e1; e2])
+
 let load_if_small t start off =
-  if is_large t then Lprim (Paddint, [start; off])
+  if is_large t then add start off
   else Lprim (Pload, [start; off])
 
 let rec expr venv tenv e =
@@ -193,7 +209,7 @@ let rec expr venv tenv e =
     let tsz = size_of tenv elty in
     let iexp = expr_with_type Tint venv tenv e2 in
     let lnum = e2.loc.Location.loc_start.Lexing.pos_lnum in
-    load_if_small elty aexp (Lprim (Pmulint, [iexp; const_int tsz])), elty
+    load_if_small elty aexp (mul iexp (const_int tsz)), elty
   | Pexp_getptr e ->
     let e, t = pointer_expr venv tenv e in
     load_if_small t e (const_int 0), t
@@ -323,7 +339,7 @@ let rec stmt rt venv tenv inloop s =
     let arr = Ident.fresh "arr" in
     let idx = Ident.fresh "idx" in
     Ldef (arr, aexp,
-          Ldef (idx, Lprim (Pmulint, [iexp; const_int tsz]), Lprim
+          Ldef (idx, mul iexp (const_int tsz), Lprim
                   (Pstore,
                    [Lident arr; Lident idx;
                     Lprim (comp_arithop op, [Lprim (Pload, [Lident arr; Lident idx]); oexp])])))
