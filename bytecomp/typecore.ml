@@ -190,6 +190,12 @@ let load_if_small t start off =
   if is_large t then add start off
   else Lprim (Pload, [start; off])
 
+let comp_arithop = function
+  | Aop_add -> Paddint
+  | Aop_sub -> Psubint
+  | Aop_mul -> Pmulint
+  | Aop_div -> Pdivint
+
 let rec expr venv tenv e =
   match e.txt with
   | Pexp_const cst ->
@@ -211,16 +217,10 @@ let rec expr venv tenv e =
   | Pexp_getptr e ->
     let e, t = pointer_expr venv tenv e in
     load_if_small t e (const_int 0), t
-  (* | Pexp_binop (e1, Bop_arith op, e2) -> *)
-  (*   let e1 = expr_with_type Tint venv tenv inloop e1 in *)
-  (*   let e2 = expr_with_type Tint venv tenv inloop e2 in *)
-  (*   let p = match op with *)
-  (*     | Aop_add -> Paddint *)
-  (*     | Aop_sub -> Psubint *)
-  (*     | Aop_mul -> Pmulint *)
-  (*     | Aop_div -> Pdivint *)
-  (*   in *)
-  (*   Lprim (p, [e1; e2]), Tint *)
+  | Pexp_binop (e1, Bop_arith op, e2) ->
+    let e1 = expr_with_type Tint venv tenv e1 in
+    let e2 = expr_with_type Tint venv tenv e2 in
+    Lprim (comp_arithop op, [e1; e2]), Tint
   (* | Pexp_binop (e1, Bop_cmp op, e2) -> *)
   (*   begin match op with *)
   (*     | Ceq *)
@@ -295,12 +295,6 @@ and small_expr venv tenv e =
   if is_large t then raise (Error (e.loc, Illegal_large_type t));
   lam, t
 
-let comp_arithop = function
-  | Aop_add -> Paddint
-  | Aop_sub -> Psubint
-  | Aop_mul -> Pmulint
-  | Aop_div -> Pdivint
-  
 let rec stmt rt venv tenv inloop s =
   match s with
   | Pstm_empty -> const_int 0
