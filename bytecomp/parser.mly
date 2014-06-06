@@ -109,6 +109,7 @@ let const_zero = mkdummyloc (Pexp_const (Const_int 0n))
 %token CONTINUE
 %token ARROW
 %token NULL
+%token <string> TYPE_IDENT
 
 %type <Parsetree.stmt> program
 %start program
@@ -145,6 +146,11 @@ ident_or_fail:
   | error
     { expecting 1 "identifier" }
   ;
+
+type_ident
+  : TYPE_IDENT
+    { mkloc $1 }
+  ;
   
 tp:
     INT
@@ -163,7 +169,7 @@ tp:
     { unclosed "[" 2 "]" 3 }
   | STRUCT ident_or_fail
     { Ptyp_struct $2 }
-  | ident
+  | type_ident
     { Ptyp_name $1 }
   ;
 
