@@ -168,11 +168,6 @@ let rec expr i ppf e =
     tp i ppf t;
     expr i ppf e
 
-let string_of_asnop = function
-  | ArithAssign op ->
-    string_of_arith_operator op ^ "="
-  | Assign -> "="
-
 let rec stmt i ppf s =
   line i ppf "statement\n";
   let i = i+1 in

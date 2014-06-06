@@ -58,6 +58,11 @@ let string_of_arith_operator = function
   | Aop_or -> "|"
   | Aop_xor -> "^"
 
+let string_of_asnop = function
+  | ArithAssign op ->
+    string_of_arith_operator op ^ "="
+  | Assign -> "="
+
 let string_of_binary_operator = function
   | Bop_arith op -> string_of_arith_operator op
   (* | Bop_logic Lop_and -> "&&" *)
