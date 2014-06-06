@@ -30,10 +30,6 @@ type instruction =
   | Kassign of int
   | Kload
   | Kstore
-  (* | Kget of int * int *)
-  (* | Kset of int * int *)
-  (* | Kgetfield of int *)
-  (* | Ksetfield of int *)
   | Kpush
   | Kpop of int
   | Kbranch of label
@@ -45,6 +41,12 @@ type instruction =
   | Ksubint
   | Kmulint
   | Kdivint
+  | Kmodint
+  | Klslint
+  | Kasrint
+  | Kandint
+  | Korint
+  | Kxorint
   | Knegint
   | Kcall of label
   | Kallocarray of int

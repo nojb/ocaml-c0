@@ -196,6 +196,12 @@ let comp_arithop = function
   | Aop_sub -> Psubint
   | Aop_mul -> Pmulint
   | Aop_div -> Pdivint
+  | Aop_mod -> Pmodint
+  | Aop_lsl -> Plslint
+  | Aop_asr -> Pasrint
+  | Aop_and -> Pandint
+  | Aop_or -> Porint
+  | Aop_xor -> Pxorint
 
 let rec expr venv tenv e =
   match e.txt with

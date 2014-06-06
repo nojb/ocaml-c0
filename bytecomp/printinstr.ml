@@ -37,9 +37,15 @@ let instruction ppf = function
   | Kstop -> fprintf ppf "\tstop"
   | Kaddint -> fprintf ppf "\taddint"
   | Ksubint -> fprintf ppf "\tsubint"
-  | Kdivint -> fprintf ppf "\tdivint"
-  | Knegint -> fprintf ppf "\tnegint"
   | Kmulint -> fprintf ppf "\tmulint"
+  | Kdivint -> fprintf ppf "\tdivint"
+  | Kmodint -> fprintf ppf "\tmodint"
+  | Klslint -> fprintf ppf "\tlslint"
+  | Kasrint -> fprintf ppf "\tasrint"
+  | Kandint -> fprintf ppf "\tandint"
+  | Korint -> fprintf ppf "\torint"
+  | Kxorint -> fprintf ppf "\txorint"
+  | Knegint -> fprintf ppf "\tnegint"
   | Kreturn n -> fprintf ppf "\treturn %i" n
   | Kcall lbl -> fprintf ppf "\tcall L%i" lbl
   | Kallocarray sz -> fprintf ppf "\tallocarray %i" sz

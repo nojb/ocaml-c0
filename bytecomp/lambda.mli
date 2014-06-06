@@ -28,6 +28,12 @@ type primitive =
   | Psubint
   | Pmulint
   | Pdivint
+  | Pmodint
+  | Plslint
+  | Pasrint
+  | Pandint
+  | Porint
+  | Pxorint
   | Pnegint
   | Pintcomp of comparison
   | Pload

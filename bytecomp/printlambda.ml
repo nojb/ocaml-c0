@@ -30,6 +30,12 @@ let primitive ppf = function
   | Psubint -> fprintf ppf "-"
   | Pmulint -> fprintf ppf "*"
   | Pdivint -> fprintf ppf "/"
+  | Pmodint -> fprintf ppf "mod"
+  | Plslint -> fprintf ppf "lsl"
+  | Pasrint -> fprintf ppf "asr"
+  | Pandint -> fprintf ppf "land"
+  | Porint -> fprintf ppf "lor"
+  | Pxorint -> fprintf ppf "lxor"
   | Pnegint -> fprintf ppf "-"
   | Pintcomp op -> fprintf ppf "%s" (string_of_binary_operator (Bop_cmp op))
   | Pload -> fprintf ppf "load"

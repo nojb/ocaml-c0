@@ -123,22 +123,22 @@ type function_to_compile = {
 
 let functions_to_compile : function_to_compile Stack.t = Stack.create ()
 
-let comp_primitive p args =
-  match p with
+let comp_primitive = function
+  | Paddint -> Kaddint
+  | Psubint -> Ksubint
   | Pmulint -> Kmulint
   | Pdivint -> Kdivint
-  | Psubint -> Ksubint
-  | Paddint -> Kaddint
+  | Pmodint -> Kmodint
+  | Plslint -> Klslint
+  | Pasrint -> Kasrint
+  | Pandint -> Kandint
+  | Porint -> Korint
+  | Pxorint -> Kxorint
   | Pnegint -> Knegint
   | Pload -> Kload
   | Pstore -> Kstore
   | Pallocarray sz -> Kallocarray sz
   | _ -> failwith "comp_primitive: not implemented"
-
-let comp_arithop = function
-  | Aop_add -> Kaddint
-  | Aop_sub -> Ksubint
-  | Aop_mul -> Kmulint
 
 let rec comp_expr env e sz lexit cont =
   if sz > !max_stack_used then max_stack_used := sz;
@@ -154,7 +154,7 @@ let rec comp_expr env e sz lexit cont =
   | Lifthenelse (e1, e2, e3) ->
     comp_binary_test env e1 e2 e3 sz lexit cont
   | Lprim (p, args) ->
-    comp_args env args sz lexit (comp_primitive p args :: cont)
+    comp_args env args sz lexit (comp_primitive p :: cont)
   | Lcall (f, []) -> (* FIXME ? *)
     let lbl = find f env in
     Kcall lbl :: cont
