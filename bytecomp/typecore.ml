@@ -341,10 +341,13 @@ let rec stmt venv tenv inloop s =
   | Pstm_expr e ->
     let e, _ = expr venv tenv e in
     e
-  | Pstm_def (t, id, Some e, s) ->
+  | Pstm_def (t, id, e, s) ->
     let t = tp venv t in
     if is_large t then raise (Error (id.loc, Illegal_large_type t));
-    let e = expr_with_type t venv tenv e in
+    let e = match e with
+      | Some e -> expr_with_type t venv tenv e
+      | None -> Lconst (default_init tenv t)
+    in
     let v, venv = add_var id t venv in
     let s = stmt venv tenv inloop s in
     Ldef (v, e, s)
