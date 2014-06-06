@@ -49,16 +49,6 @@ let rec lambda ppf = function
   | Lprim (p, args) ->
     let lams ppf largs = List.iter (fun l -> fprintf ppf "@ %a" lambda l) largs in
     fprintf ppf "@[<2>(%a%a)@]" primitive p lams args
-  (* | Llet (id, e1, e2) -> *)
-  (*   fprintf ppf "@[<2>(let@ @[<hv 1>(@[<2>%a@ %a@]" Ident.print id lambda e1; *)
-  (*   let rec letbody = function *)
-  (*     | Llet (id, e1, e2) -> *)
-  (*       fprintf ppf "@ @[<2>%a@ %a@]" Ident.print id lambda e1; *)
-  (*       letbody e2 *)
-  (*     | _ as e -> e *)
-  (*   in *)
-  (*   let e = letbody e2 in *)
-  (*   fprintf ppf ")@]@ %a)@]" lambda e *)
   | Lcall (id, args) ->
     let lams ppf largs = List.iter (fun l -> fprintf ppf "@ %a" lambda l) largs in
     fprintf ppf "@[<2>(%a%a)@]" Ident.print id lams args
@@ -71,7 +61,15 @@ let rec lambda ppf = function
   | Lseq (e1, e2) ->
     fprintf ppf "@[<2>(seq@ %a@ %a)@]" lambda e1 sequence e2
   | Ldef (id, e1, e2) ->
-    fprintf ppf "@[<2>(def@ (%a@ %a)@ %a)@]" Ident.print id lambda e1 lambda e2
+    fprintf ppf "@[<2>(def@ @[<hv 1>(@[<2>%a@ %a@]" Ident.print id lambda e1;
+    let rec letbody = function
+      | Ldef (id, e1, e2) ->
+        fprintf ppf "@ @[<2>%a@ %a@]" Ident.print id lambda e1;
+        letbody e2
+      | _ as e -> e
+    in
+    let e = letbody e2 in
+    fprintf ppf ")@]@ %a)@]" lambda e  
   | Lreturn None ->
     fprintf ppf "(return)"
   | Lreturn (Some e) ->
