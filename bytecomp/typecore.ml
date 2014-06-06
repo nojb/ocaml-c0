@@ -424,6 +424,7 @@ let defn venv tenv d =
     (* FIXME check for param repetitions *)    
     let ats = List.map (fun (t, _) -> tp venv t) args in
     let rt = tp venv rt in
+    assert (not (is_large rt)); (* FIXME *)
     let id, venv0 = add_fun id ats rt venv in
     let ids, venv = List.fold_left2 (fun (ids, venv) (_, id) t ->
         let id, venv = add_var id t venv in id :: ids, venv) ([], venv0) args ats in
