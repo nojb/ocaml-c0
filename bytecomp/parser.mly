@@ -26,30 +26,6 @@ let expecting num name =
   let open Syntaxerr in
   raise (Error (Expecting (rhs_loc num, name)))
 
-(* let maptxt f e = *)
-(*   { e with txt = f e.txt } *)
-
-(* let rec lvalue pos = function *)
-(*   | Pexp_ident _ as e -> e *)
-(*   | Pexp_field (e, id) -> Pexp_field (maptxt rvalue e, id) *)
-(*   | Pexp_index (e1, e2) -> Pexp_index (maptxt rvalue e1, maptxt rvalue e2) *)
-(*   | Pexp_deref e -> Pexp_deref (maptxt rvalue e) *)
-(*   | _ -> expecting pos "lvalue" *)
-
-(* and rvalue = function *)
-(*   | Pexp_const _ as e -> e *)
-(*   | Pexp_ident id -> Pexp_valof (mkdummyloc (Pexp_ident id)) *)
-(*   | Pexp_field (e, id) -> Pexp_valof (mkdummyloc (Pexp_field (maptxt rvalue e, id))) *)
-(*   | Pexp_index (e1, e2) -> Pexp_valof (mkdummyloc (Pexp_index (maptxt rvalue e1, maptxt rvalue e2))) *)
-(*   | Pexp_deref e -> Pexp_valof (mkdummyloc (Pexp_deref (maptxt rvalue e))) *)
-(*   | Pexp_binop (e1, op, e2) -> Pexp_binop (maptxt rvalue e1, op, maptxt rvalue e2) *)
-(*   | Pexp_unop (op, e) -> Pexp_unop (op, maptxt rvalue e) *)
-(*   | Pexp_cond (e1, e2, e3) -> Pexp_cond (maptxt rvalue e1, maptxt rvalue e2, maptxt rvalue e3) *)
-(*   | Pexp_call (id, el) -> Pexp_call (id, List.map (maptxt rvalue) el) *)
-(*   | Pexp_alloc _ as e -> e *)
-(*   | Pexp_allocarray (t, e) -> Pexp_allocarray (t, maptxt rvalue e) *)
-(*   | Pexp_valof _ -> assert false *)
-
 let const_true = mkdummyloc (Pexp_const (Const_bool true))
 let const_false = mkdummyloc (Pexp_const (Const_bool false))
 let const_int n = mkdummyloc (Pexp_const (Const_int (Nativeint.of_int n)))
@@ -275,16 +251,6 @@ rexpr:
     { mkloc (Pexp_cond ($1, $3, $5)) }
   | ident inparen_or_fail(rexpr_list)
     { mkloc (Pexp_call ($1, $2)) }
-  (* | rexpr DOT ident_or_fail *)
-  (*   { mkloc (Pexp_field ($1, $3)) } *)
-  (* | rexpr ARROW ident_or_fail *)
-  (*   { mkloc (Pexp_field (mkloc (Pexp_deref $1), $3)) } *)
-  (* | rexpr LBRACKET expr RBRACKET *)
-  (*   { mkloc (Pexp_index ($1, $3)) } *)
-  (* | expr LBRACKET expr error *)
-  (*   { unclosed "[" 2 "]" 4 } *)
-  (* | STAR expr %prec prec_unary_op *)
-  (*   { mkloc (Pexp_deref $2) } *)
   | ALLOC inparen_or_fail(tp)
     { mkloc (Pexp_alloc $2) }
   | alloc_array
@@ -438,25 +404,6 @@ stmtm:
   | CONTINUE semi_or_fail
     { Pstm_continue }
   ;
-
-(* rec_fun_decl: *)
-(*     fun_decl_list *)
-(*     { mkloc (Pdec_function $1) } *)
-(*   ; *)
-  
-(* fun_decl_list: *)
-(*     fun_decl *)
-(*     { $1 :: [] } *)
-(*   | fun_decl fun_decl_list *)
-(*     { $1 :: $2 } *)
-(*   ; *)
-
-(* fun_decl: *)
-(*     FUNCTION ident LPAREN opt_ident_colon_ident_comma_list RPAREN opt_colon_ident EQUAL expr *)
-(*     { *)
-(*       { pfun_name = $2; pfun_arguments = $4; pfun_return_type = $6; pfun_body = $8 } *)
-(*     } *)
-(*   ; *)
 
 fields
   : x = list(terminated(pair(tp, ident), SEMI))
