@@ -37,33 +37,35 @@ type tp =
   | Ptyp_struct of string loc
   | Ptyp_name of string loc
 
-type expr =
+type rexpr =
   | Pexp_const of constant
-  | Pexp_ident of string loc
-  | Pexp_field of expr loc * string loc
-  | Pexp_index of expr loc * expr loc
-  | Pexp_deref of expr loc
-  | Pexp_binop of expr loc * binary_operator * expr loc
-  | Pexp_unop of unary_operator * expr loc
-  | Pexp_cond of expr loc * expr loc * expr loc
-  | Pexp_call of string loc * expr loc list
+  | Pexp_binop of rexpr loc * binary_operator * rexpr loc
+  | Pexp_unop of unary_operator * rexpr loc
+  | Pexp_cond of rexpr loc * rexpr loc * rexpr loc
+  | Pexp_call of string loc * rexpr loc list
   | Pexp_alloc of tp
-  | Pexp_allocarray of tp * expr loc
-  | Pexp_valof of expr loc
+  | Pexp_allocarray of tp * rexpr loc
+  | Pexp_valof of lexpr loc
+
+and lexpr =
+  | Pexp_ident of string loc
+  | Pexp_index of rexpr loc * rexpr loc
+  | Pexp_field of rexpr loc * string loc
+  | Pexp_deref of rexpr loc
         
 type stmt =
   | Pstm_empty
-  | Pstm_assign of expr loc * expr loc
-  | Pstm_assignop of expr loc * arith_operator * expr loc
-  | Pstm_expr of expr loc
-  | Pstm_def of tp * string loc * expr loc option * stmt
-  | Pstm_ifthenelse of expr loc * stmt * stmt
-  | Pstm_while of expr loc * stmt
+  | Pstm_assign of lexpr loc * rexpr loc
+  | Pstm_assignop of lexpr loc * arith_operator * rexpr loc
+  | Pstm_expr of rexpr loc
+  | Pstm_def of tp * string loc * rexpr loc option * stmt
+  | Pstm_ifthenelse of rexpr loc * stmt * stmt
+  | Pstm_while of rexpr loc * stmt
   (* | SFor of stmt * expr loc * stmt * stmt *)
-  | Pstm_return of expr loc option
+  | Pstm_return of rexpr loc option
   | Pstm_seq of stmt * stmt
-  | Pstm_assert of expr loc
-  | Pstm_error of expr loc
+  | Pstm_assert of rexpr loc
+  | Pstm_error of rexpr loc
   | Pstm_break
   | Pstm_continue
 

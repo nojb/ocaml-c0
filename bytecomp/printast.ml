@@ -81,50 +81,55 @@ let rec tp i ppf t =
   | Ptyp_name id ->
     line i ppf "Ptyp_name %a\n" fmt_string_loc id
 
-let rec expr i ppf e =
-  line i ppf "expression %a\n" fmt_location e.loc;
+let rec rexpr i ppf e =
+  line i ppf "rexpression %a\n" fmt_location e.loc;
   let i = i+1 in
   match e.txt with
   | Pexp_const cst ->
     line i ppf "Pexp_const %a\n" print_constant cst
-  | Pexp_ident id ->
-    line i ppf "Pexp_ident %a\n" fmt_string_loc id
   | Pexp_binop (e1, op, e2) ->
     line i ppf "Pexp_binop %S\n" (string_of_binary_operator op);
-    expr i ppf e1;
-    expr i ppf e2
+    rexpr i ppf e1;
+    rexpr i ppf e2
   | Pexp_unop (op, e) ->
     line i ppf "Pexp_unop %S\n" (string_of_unary_operator op);
-    expr i ppf e
+    rexpr i ppf e
   | Pexp_cond (e1, e2, e3) ->
     line i ppf "Pexp_cond\n";
-    expr i ppf e1;
-    expr i ppf e2;
-    expr i ppf e3
+    rexpr i ppf e1;
+    rexpr i ppf e2;
+    rexpr i ppf e3
   | Pexp_call (id, el) ->
     line i ppf "Pexp_call %a\n" fmt_string_loc id;
-    list i expr ppf el
-  | Pexp_field (e, id) ->
-    line i ppf "Pexp_field %a\n" fmt_string_loc id;
-    expr i ppf e
-  | Pexp_index (e1, e2) ->
-    line i ppf "Pexp_index\n";
-    expr i ppf e1;
-    expr i ppf e2
-  | Pexp_deref e ->
-    line i ppf "Pexp_deref\n";
-    expr i ppf e
+    list i rexpr ppf el
   | Pexp_valof e ->
     line i ppf "Pexp_valof\n";
-    expr i ppf e
+    lexpr i ppf e
   | Pexp_alloc t ->
     line i ppf "Pexp_alloc\n";
     tp i ppf t
   | Pexp_allocarray (t, e) ->
     line i ppf "Pexp_allocarray\n";
     tp i ppf t;
-    expr i ppf e
+    rexpr i ppf e
 
+and lexpr i ppf e =
+  line i ppf "lexpression %a\n" fmt_location e.loc;
+  let i = i+1 in
+  match e.txt with
+  | Pexp_ident id ->
+    line i ppf "Pexp_ident %a\n" fmt_string_loc id
+  | Pexp_field (e, id) ->
+    line i ppf "Pexp_field %a\n" fmt_string_loc id;
+    rexpr i ppf e
+  | Pexp_index (e1, e2) ->
+    line i ppf "Pexp_index\n";
+    rexpr i ppf e1;
+    rexpr i ppf e2
+  | Pexp_deref e ->
+    line i ppf "Pexp_deref\n";
+    rexpr i ppf e
+  
 let rec stmt i ppf s =
   line i ppf "statement\n";
   let i = i+1 in
@@ -133,42 +138,42 @@ let rec stmt i ppf s =
     line i ppf "Pstm_empty\n"
   | Pstm_assignop (e1, op, e2) ->
     line i ppf "Pstm_assignop %S\n" (string_of_arith_operator op);
-    expr i ppf e1;
-    expr i ppf e2
+    lexpr i ppf e1;
+    rexpr i ppf e2
   | Pstm_assign (e1, e2) ->
     line i ppf "Pstm_assign\n";
-    expr i ppf e1;
-    expr i ppf e2
+    lexpr i ppf e1;
+    rexpr i ppf e2
   | Pstm_expr e ->
     line i ppf "Pstm_expr\n";
-    expr i ppf e
+    rexpr i ppf e
   | Pstm_def (t, id, e, s) ->
     line i ppf "Pstm_def %a\n" fmt_string_loc id;
     tp i ppf t;
-    option i expr ppf e;
+    option i rexpr ppf e;
     stmt i ppf s
   | Pstm_ifthenelse (e, s1, s2) ->
     line i ppf "Pstm_ifthenelse\n";
-    expr i ppf e;
+    rexpr i ppf e;
     stmt i ppf s1;
     stmt i ppf s2
   | Pstm_while (e, s) ->
     line i ppf "Pstm_while\n";
-    expr i ppf e;
+    rexpr i ppf e;
     stmt i ppf s
   | Pstm_return e ->
     line i ppf "Pstm_return\n";
-    option i expr ppf e
+    option i rexpr ppf e
   | Pstm_seq (s1, s2) ->
     line i ppf "Pstm_seq\n";
     stmt i ppf s1;
     stmt i ppf s2
   | Pstm_assert e ->
     line i ppf "Pstm_assert\n";
-    expr i ppf e
+    rexpr i ppf e
   | Pstm_error e ->
     line i ppf "Pstm_error\n";
-    expr i ppf e
+    rexpr i ppf e
   | Pstm_break ->
     line i ppf "Pstm_break\n"
   | Pstm_continue ->
