@@ -60,6 +60,30 @@ let branch_to label cont =
   else
     Kbranch label :: cont
 
+let rec branch_to_cont2 lbl n cont = function
+  | Klabel _ :: c -> branch_to_cont2 lbl n cont c
+  | Kpop m :: c -> branch_to_cont2 lbl (n+m) cont c
+  | Kreturn m :: _ -> (Kreturn (n+m), cont)
+  | _ ->
+    match lbl with
+    | Some lbl ->
+      Kbranch lbl, cont
+    | None ->
+      let lbl = new_label () in
+      Kbranch lbl, Klabel lbl :: cont
+
+let branch_to_cont cont =
+  match cont with
+  | (Kbranch _ as br) :: _ -> br, cont
+  | (Kreturn _ as ret) :: _ -> ret, cont
+  | Klabel lbl :: _ -> branch_to_cont2 (Some lbl) 0 cont cont
+  | _ -> branch_to_cont2 None 0 cont cont
+
+let code_will_jump l lexit =
+  match l with
+  | Lexit n -> Some (List.nth lexit n)
+  | _ -> None
+
 let rec add_pop n cont =
   if !optimise then
     if n = 0 then cont
@@ -148,11 +172,16 @@ and comp_expr_list env argl sz cont =
     comp_expr env exp sz (Kpush :: comp_expr_list env exps (sz+1) cont)
 
 and comp_cond env cond ifso ifnot sz cont =
-  (* FIXME - optimise *)
-  let lbl_cont, cont = label_code cont in
-  let lbl_ifno, ifno = label_code (comp_expr env ifnot sz cont) in
-  comp_expr env cond sz
-    (Kbranchifnot lbl_ifno :: comp_expr env ifso sz (branch_to lbl_cont ifno))
+  let cond_cont =
+    if ifnot = Lconst (Const_int 0n) then
+      let lbl_end, cont = label_code cont in
+      Kbranchifnot lbl_end :: comp_expr env ifso sz cont
+    else
+      let branch_end, cont1 = branch_to_cont cont in
+      let lbl2, cont2 = label_code (comp_expr env ifnot sz cont1) in
+      Kbranchifnot lbl2 :: comp_expr env ifso sz (branch_end :: cont2)
+  in
+  comp_expr env cond sz cond_cont
 
 let rec comp_stmt env s sz lexit cont =
   match s with
@@ -185,11 +214,26 @@ let rec comp_stmt env s sz lexit cont =
     comp_expr env e sz (Kreturn sz :: discard_dead_code cont)
 
 and comp_binary_test env cond ifso ifnot sz lexit cont =
-  (* FIXME - optimise *)
-  let lbl_cont, cont = label_code cont in
-  let lbl_ifno, ifno = label_code (comp_stmt env ifnot sz lexit cont) in
-  comp_expr env cond sz
-    (Kbranchifnot lbl_ifno :: comp_stmt env ifso sz lexit (branch_to lbl_cont ifno))
+  let cond_cont =
+    if ifnot = Lempty then
+      let lbl_end, cont = label_code cont in
+      Kbranchifnot lbl_end :: comp_stmt env ifso sz lexit cont
+    else
+      match code_will_jump ifso lexit with
+      | Some lbl ->
+        let cont = comp_stmt env ifnot sz lexit cont in
+        Kbranchif lbl :: cont
+      | None ->
+        match code_will_jump ifnot lexit with
+        | Some lbl ->
+          let cont = comp_stmt env ifso sz lexit cont in
+          Kbranchifnot lbl :: cont
+        | None ->
+          let branch_end, cont1 = branch_to_cont cont in
+          let lbl2, cont2 = label_code (comp_stmt env ifnot sz lexit cont1) in
+          Kbranchifnot lbl2 :: comp_stmt env ifso sz lexit (branch_end :: cont2)
+  in
+  comp_expr env cond sz cond_cont
 
 let comp_function env lbl (Lfun (id, args, body)) cont =
   let arity = List.length args in (* FIXME *)
