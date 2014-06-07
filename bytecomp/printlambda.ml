@@ -35,7 +35,9 @@ let precedence = function
   | Lconst _
   | Lident _ -> (16, NA)
   | Lprim _
-  | Lload _ -> (15, RtoL)
+  | Lcall _
+  | Lload _
+  | Lunop _ -> (15, RtoL)
   | Lbinop (_, Bop_arith Aop_mul, _)
   | Lbinop (_, Bop_arith Aop_div, _)
   | Lbinop (_, Bop_arith Aop_mod, _) -> (13, LtoR)
