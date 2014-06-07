@@ -24,18 +24,6 @@ open Asttypes
 type primitive =
   | Palloc of int
   | Pallocarray of int
-  | Paddint
-  | Psubint
-  | Pmulint
-  | Pdivint
-  | Pmodint
-  | Plslint
-  | Pasrint
-  | Pandint
-  | Porint
-  | Pxorint
-  | Pnegint
-  | Pintcomp of comparison
   | Perror of int
     
 type expr =
@@ -45,6 +33,8 @@ type expr =
   | Lprim of primitive * expr list
   | Lcall of Ident.t * expr list
   | Lcond of expr * expr * expr
+  | Lbinop of expr * binary_operator * expr
+  | Lunop of unary_operator * expr
              
 type stmt =
   | Lempty

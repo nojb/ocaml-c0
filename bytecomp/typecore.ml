@@ -178,29 +178,29 @@ let mul e1 e2 =
   | Lconst (Const_int n), Lconst (Const_int m) -> Lconst (Const_int (Nativeint.mul n m))
   | Lconst (Const_int 1n), e1
   | e1, Lconst (Const_int 1n) -> e1
-  | e1, e2 -> Lprim (Pmulint, [e1; e2])
+  | e1, e2 -> Lbinop (e1, Bop_arith Aop_mul, e2)
 
 let add e1 e2 =
   match e1, e2 with
   | Lconst (Const_int n), Lconst (Const_int m) -> Lconst (Const_int (Nativeint.add n m))
   | e1, Lconst (Const_int 0n)
   | Lconst (Const_int 0n), e1 -> e1
-  | e1, e2 -> Lprim (Paddint, [e1; e2])
+  | e1, e2 -> Lbinop (e1, Bop_arith Aop_add, e2)
 
 let load_if_small t e =
   if is_large t then e else Lload e
 
-let comp_arithop = function
-  | Aop_add -> Paddint
-  | Aop_sub -> Psubint
-  | Aop_mul -> Pmulint
-  | Aop_div -> Pdivint
-  | Aop_mod -> Pmodint
-  | Aop_lsl -> Plslint
-  | Aop_asr -> Pasrint
-  | Aop_and -> Pandint
-  | Aop_or -> Porint
-  | Aop_xor -> Pxorint
+(* let comp_arithop = function *)
+(*   | Aop_add -> Paddint *)
+(*   | Aop_sub -> Psubint *)
+(*   | Aop_mul -> Pmulint *)
+(*   | Aop_div -> Pdivint *)
+(*   | Aop_mod -> Pmodint *)
+(*   | Aop_lsl -> Plslint *)
+(*   | Aop_asr -> Pasrint *)
+(*   | Aop_and -> Pandint *)
+(*   | Aop_or -> Porint *)
+(*   | Aop_xor -> Pxorint *)
 
 let rec expr venv tenv e =
   match e.txt with
@@ -226,10 +226,10 @@ let rec expr venv tenv e =
   | Pexp_valof e ->
     let e, t = expr venv tenv e in
     load_if_small t e, t
-  | Pexp_binop (e1, Bop_arith op, e2) ->
+  | Pexp_binop (e1, (Bop_arith _ as op), e2) ->
     let e1 = expr_with_type Tint venv tenv e1 in
     let e2 = expr_with_type Tint venv tenv e2 in
-    Lprim (comp_arithop op, [e1; e2]), Tint
+    Lbinop (e1, op, e2), Tint
   | Pexp_binop (e1, Bop_cmp op, e2) ->
     begin match op with
       | Ceq
@@ -241,7 +241,7 @@ let rec expr venv tenv e =
           | Tint
           | Tpointer _ ->
             let e2 = expr_with_type t venv tenv e2 in
-            Lprim (Pintcomp op, [e1; e2]), Tbool
+            Lbinop (e1, Bop_cmp op, e2), Tbool
           | _ ->
             failwith "eq neq"
         end
@@ -249,7 +249,7 @@ let rec expr venv tenv e =
         (* FIXME ok for chars as well *)
         let e1 = expr_with_type Tint venv tenv e1 in
         let e2 = expr_with_type Tint venv tenv e2 in
-        Lprim (Pintcomp op, [e1; e2]), Tbool
+        Lbinop (e1, Bop_cmp op, e2), Tbool
     end
   (* | Pexp_unop (Uop_minus, e) -> *)
   (*   let e = expr_with_type Tint venv tenv inloop e in *)
@@ -313,7 +313,7 @@ let rec stmt rt venv tenv inloop sz s =
     let e1, t = small_expr venv tenv e1 in
     let e2 = expr_with_type t venv tenv e2 in
     Lseq (Lstore (Lstackaddr sz, e1),
-          Lstore (Lload (Lstackaddr sz), Lprim (comp_arithop op, [Lload (Lstackaddr sz); e2])))
+          Lstore (Lload (Lstackaddr sz), Lbinop (Lload (Lstackaddr sz), Bop_arith op, e2)))
   | Pstm_assign (e1, e2) ->
     let e1, t = small_expr venv tenv e1 in
     let e2 = expr_with_type t venv tenv e2 in

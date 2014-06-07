@@ -86,20 +86,21 @@ let rec is_tailcall = function
   | _ -> false
 
 let comp_primitive = function
-  | Paddint -> Kaddint
-  | Psubint -> Ksubint
-  | Pmulint -> Kmulint
-  | Pdivint -> Kdivint
-  | Pmodint -> Kmodint
-  | Plslint -> Klslint
-  | Pasrint -> Kasrint
-  | Pandint -> Kandint
-  | Porint -> Korint
-  | Pxorint -> Kxorint
-  | Pnegint -> Knegint
   | Pallocarray sz -> Kallocarray sz
   | _ -> failwith "comp_primitive: not implemented"
 
+let comp_binop = function
+  | Bop_arith Aop_add -> Kaddint
+  | Bop_arith Aop_sub -> Ksubint
+  | Bop_arith Aop_mul -> Kmulint
+  | Bop_arith Aop_div -> Kdivint
+  | Bop_arith Aop_mod -> Kmodint
+  | Bop_arith Aop_lsl -> Klslint
+  | Bop_arith Aop_asr -> Kasrint
+  | Bop_arith Aop_and -> Kandint
+  | Bop_arith Aop_or -> Korint
+  | Bop_arith Aop_xor -> Kxorint
+  
 let rec comp_expr env e cont =
   match e with
   | Lconst cst ->
@@ -110,8 +111,8 @@ let rec comp_expr env e cont =
     Kloadi off :: cont
   | Lload e ->
     comp_expr env e (Kload :: cont)
-  | Lprim (p, args) ->
-    comp_args env args (comp_primitive p :: cont)
+  | Lprim (p, el) ->
+    comp_args env el (comp_primitive p :: cont)
   | Lcall (f, []) ->
     let lbl = find f env in
     let lbl_cont, cont = label_code cont in
@@ -130,6 +131,8 @@ let rec comp_expr env e cont =
       Kpush_retaddr lbl_cont :: comp_args env el (Kpush :: Kcall (nargs, lbl) :: cont)
   | Lcond (e1, e2, e3) ->
     comp_cond env e1 e2 e3 cont
+  | Lbinop (e1, op, e2) ->
+    comp_expr env e2 (comp_expr env e1 (comp_binop op :: cont))
     
 and comp_args env argl cont =
   comp_expr_list env (List.rev argl) cont

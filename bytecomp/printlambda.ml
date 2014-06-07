@@ -23,40 +23,30 @@ open Format
 open Asttypes
 open Lambda
 
-let string_of_primitive = function
-  (* | Palloc n -> "alloc" *)
-  (* | Pallocarray n -> fprintf ppf "allocarray %i" n *)
-  | Paddint -> "+"
-  | Psubint -> "-"
-  | Pmulint -> "*"
-  | Pdivint -> "/"
-  | Pmodint -> "%"
-  | Plslint -> "<<"
-  | Pasrint -> ">>"
-  | Pandint -> "&"
-  | Porint -> "|"
-  | Pxorint -> "^"
-  | Pnegint -> "-"
-  | Pintcomp op -> string_of_binary_operator (Bop_cmp op)
-  (* | Perror l -> fprintf ppf "error<%i>" l *)
+let print_primitive ppf p f e =
+  match p with
+  | Palloc n -> fprintf ppf "alloc(%i,@ %a)" n f e
+  | Pallocarray n -> fprintf ppf "allocarray(%i,@ %a)" n f e
+  | Perror l -> fprintf ppf "error(%i,@ %a)" l f e
 
 type associativity = LtoR | RtoL | NA
 
 let precedence = function
   | Lconst _
   | Lstackaddr _ -> (16, NA)
+  | Lprim _
   | Lload _ -> (15, RtoL)
-  | Lprim (Pmulint, _)
-  | Lprim (Pdivint, _)
-  | Lprim (Pmodint, _) -> (13, LtoR)
-  | Lprim (Paddint, _)
-  | Lprim (Psubint, _) -> (12, LtoR)
-  | Lprim (Plslint, _)
-  | Lprim (Pasrint, _) -> (10, LtoR)
-  | Lprim (Pintcomp _, _) -> (10, LtoR)
-  | Lprim (Pandint, _) -> (8, LtoR)
-  | Lprim (Pxorint, _) -> (7, LtoR)
-  | Lprim (Porint, _) -> (6, LtoR)
+  | Lbinop (_, Bop_arith Aop_mul, _)
+  | Lbinop (_, Bop_arith Aop_div, _)
+  | Lbinop (_, Bop_arith Aop_mod, _) -> (13, LtoR)
+  | Lbinop (_, Bop_arith Aop_add, _)
+  | Lbinop (_, Bop_arith Aop_sub, _) -> (12, LtoR)
+  | Lbinop (_, Bop_arith Aop_lsl, _)
+  | Lbinop (_, Bop_arith Aop_asr, _) -> (10, LtoR)
+  | Lbinop (_, Bop_cmp _, _) -> (10, LtoR)
+  | Lbinop (_, Bop_arith Aop_and, _) -> (8, LtoR)
+  | Lbinop (_, Bop_arith Aop_xor, _) -> (7, LtoR)
+  | Lbinop (_, Bop_arith Aop_or, _) -> (6, LtoR)
 
 let rec expr1 ppf (prec, e) =
   let prec', assoc = precedence e in
@@ -71,12 +61,16 @@ let rec expr1 ppf (prec, e) =
     fprintf ppf "&%i" off
   | Lload e ->
     fprintf ppf "[%a]" expr e
-  | Lprim (op, [e1; e2]) ->
-    fprintf ppf "%a@ %s %a" expr1 (prec1, e1) (string_of_primitive op) expr1 (prec2, e2)
+  | Lprim (p, el) ->
+    print_primitive ppf p args el
   | Lcall (id, el) ->
     fprintf ppf "%a(%a)" Ident.print id args el
   | Lcond (e1, e2, e3) ->
     fprintf ppf "%a ?@ %a :@ %a" expr e1 expr e2 expr e3
+  | Lbinop (e1, op, e2) ->
+    fprintf ppf "%a@ %s %a" expr1 (prec1, e1) (string_of_binary_operator op) expr1 (prec2, e2)
+  | Lunop (op, e) ->
+    fprintf ppf "%s %a" (string_of_unary_operator op) expr1 (prec', e)
   end;
   if prec' < prec then fprintf ppf ")@]" else fprintf ppf "@]"
       
