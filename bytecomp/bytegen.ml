@@ -101,94 +101,104 @@ let comp_binop = function
   | Bop_arith Aop_or -> Korint
   | Bop_arith Aop_xor -> Kxorint
   
-let rec comp_expr env e cont =
+let rec comp_expr env e sz cont =
   match e with
   | Lconst cst ->
     Kconst cst :: cont
-  | Lstackaddr off ->
-    Kaccess off :: cont
-  | Lload (Lstackaddr off) ->
-    Kloadi off :: cont
+  | Lident id ->
+    let pos = find id env in
+    Kaccess (sz - pos) :: cont
+  | Lload (Lident id) ->
+    let pos = find id env in
+    Kloadi (sz - pos) :: cont
   | Lload e ->
-    comp_expr env e (Kload :: cont)
+    comp_expr env e sz (Kload :: cont)
   | Lprim (p, el) ->
-    comp_args env el (comp_primitive p :: cont)
+    comp_args env el sz (comp_primitive p :: cont)
   | Lcall (f, []) ->
     let lbl = find f env in
     let lbl_cont, cont = label_code cont in
     if is_tailcall cont then
-      Ktailcall (0, lbl) :: discard_dead_code cont
+      Ktailcall (sz, 0, lbl) :: discard_dead_code cont
     else
       Kpush_retaddr lbl_cont :: Kcall (0, lbl) :: cont
   | Lcall (f, el) ->
     let nargs = List.length el in
     let lbl = find f env in
     if is_tailcall cont then
-      comp_args env el
-        (Kpush :: Ktailcall (nargs, lbl) :: discard_dead_code cont)
+      comp_args env el sz
+        (Kpush :: Ktailcall (sz, nargs, lbl) :: discard_dead_code cont)
     else
       let lbl_cont, cont = label_code cont in
-      Kpush_retaddr lbl_cont :: comp_args env el (Kpush :: Kcall (nargs, lbl) :: cont)
+      Kpush_retaddr lbl_cont :: comp_args env el (sz+1) (Kpush :: Kcall (nargs, lbl) :: cont)
   | Lcond (e1, e2, e3) ->
-    comp_cond env e1 e2 e3 cont
+    comp_cond env e1 e2 e3 sz cont
   | Lbinop (e1, op, e2) ->
-    comp_expr env e2 (comp_expr env e1 (comp_binop op :: cont))
+    comp_expr env e2 sz (Kpush :: comp_expr env e1 (sz+1) (comp_binop op :: cont))
     
-and comp_args env argl cont =
-  comp_expr_list env (List.rev argl) cont
+and comp_args env argl sz cont =
+  comp_expr_list env (List.rev argl) sz cont
 
-and comp_expr_list env argl cont =
+and comp_expr_list env argl sz cont =
   match argl with
   | [] -> cont
   | exp :: [] ->
-    comp_expr env exp cont
+    comp_expr env exp sz cont
   | exp :: exps ->
-    comp_expr env exp (Kpush :: comp_expr_list env exps cont)
+    comp_expr env exp sz (Kpush :: comp_expr_list env exps (sz+1) cont)
 
-and comp_cond env cond ifso ifnot cont =
+and comp_cond env cond ifso ifnot sz cont =
   (* FIXME - optimise *)
   let lbl_cont, cont = label_code cont in
-  let lbl_ifno, ifno = label_code (comp_expr env ifnot cont) in
-  comp_expr env cond
-    (Kbranchifnot lbl_ifno :: comp_expr env ifso (branch_to lbl_cont ifno))
+  let lbl_ifno, ifno = label_code (comp_expr env ifnot sz cont) in
+  comp_expr env cond sz
+    (Kbranchifnot lbl_ifno :: comp_expr env ifso sz (branch_to lbl_cont ifno))
 
-let rec comp_stmt env s lexit cont =
+let rec comp_stmt env s sz lexit cont =
   match s with
   | Lempty ->
     cont
-  | Lstore (Lstackaddr off, e) ->
-    comp_expr env e (Kstorei off :: cont)
+  | Lstore (Lident id, e) ->
+    let pos = find id env in
+    comp_expr env e sz (Kstorei (sz - pos) :: cont)
   | Lstore (e1, e2) ->
-    comp_expr env e1 (Kpush :: comp_expr env e2 (Kstore :: cont))
+    comp_expr env e1 sz (Kpush :: comp_expr env e2 (sz+1) (Kstore :: cont))
   | Lexpr e ->
-    comp_expr env e cont
+    comp_expr env e sz cont
   | Lifthenelse (e1, e2, e3) ->
-    comp_binary_test env e1 e2 e3 lexit cont
+    comp_binary_test env e1 e2 e3 sz lexit cont
   | Lloop s ->
     let lbl = new_label () in
-    Klabel lbl :: comp_stmt env s lexit (Kbranch lbl :: discard_dead_code cont)
+    Klabel lbl :: comp_stmt env s sz lexit (Kbranch lbl :: discard_dead_code cont)
   | Lblock s ->
     let lbl, cont = label_code cont in
-    comp_stmt env s (lbl :: lexit) cont
+    comp_stmt env s sz (lbl :: lexit) cont
   | Lexit n ->
     branch_to (List.nth lexit n) (discard_dead_code cont)
+  | Llet (id, e, s) ->
+    comp_expr env e sz (Kpush :: comp_stmt (add_var id sz env) s (sz+1) lexit cont)
   | Lseq (e1, e2) ->
-    comp_stmt env e1 lexit (comp_stmt env e2 lexit cont)
+    comp_stmt env e1 sz lexit (comp_stmt env e2 sz lexit cont)
   | Lreturn None ->
-    Kreturn (-1) (* arity *) :: discard_dead_code cont
+    Kreturn sz :: discard_dead_code cont
   | Lreturn (Some e) ->
-    comp_expr env e (Kreturn (-1) (* arity *) :: discard_dead_code cont)
+    comp_expr env e sz (Kreturn sz :: discard_dead_code cont)
 
-and comp_binary_test env cond ifso ifnot lexit cont =
+and comp_binary_test env cond ifso ifnot sz lexit cont =
   (* FIXME - optimise *)
   let lbl_cont, cont = label_code cont in
-  let lbl_ifno, ifno = label_code (comp_stmt env ifnot lexit cont) in
-  comp_expr env cond
-    (Kbranchifnot lbl_ifno :: comp_stmt env ifso lexit (branch_to lbl_cont ifno))
+  let lbl_ifno, ifno = label_code (comp_stmt env ifnot sz lexit cont) in
+  comp_expr env cond sz
+    (Kbranchifnot lbl_ifno :: comp_stmt env ifso sz lexit (branch_to lbl_cont ifno))
 
 let comp_function env lbl (Lfun (id, args, body)) cont =
-  (* let arity = args in *)
-  Klabel lbl :: comp_stmt env body [] cont
+  let arity = List.length args in (* FIXME *)
+  let rec add_args env pos = function
+    | [] -> env
+    | id :: ids -> add_args (add_var id pos env) (pos+1) ids
+  in
+  let env = add_args env 0 args in
+  Klabel lbl :: comp_stmt env body arity [] cont
   
 let compile_program fns =
   label_counter := 0;

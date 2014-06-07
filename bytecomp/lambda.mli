@@ -28,7 +28,7 @@ type primitive =
     
 type expr =
   | Lconst of constant
-  | Lstackaddr of int
+  | Lident of Ident.t
   | Lload of expr
   | Lprim of primitive * expr list
   | Lcall of Ident.t * expr list
@@ -44,8 +44,9 @@ type stmt =
   | Lloop of stmt
   | Lblock of stmt
   | Lexit of int
+  | Llet of Ident.t * expr * stmt
   | Lseq of stmt * stmt
   | Lreturn of expr option
 
 type lambda_fun =
-  Lfun of Ident.t * int * stmt
+  Lfun of Ident.t * Ident.t list * stmt

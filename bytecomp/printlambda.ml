@@ -33,7 +33,7 @@ type associativity = LtoR | RtoL | NA
 
 let precedence = function
   | Lconst _
-  | Lstackaddr _ -> (16, NA)
+  | Lident _ -> (16, NA)
   | Lprim _
   | Lload _ -> (15, RtoL)
   | Lbinop (_, Bop_arith Aop_mul, _)
@@ -57,8 +57,8 @@ let rec expr1 ppf (prec, e) =
   begin match e with
   | Lconst cst ->
     print_constant ppf cst
-  | Lstackaddr off ->
-    fprintf ppf "&%i" off
+  | Lident id ->
+    Ident.print ppf id
   | Lload e ->
     fprintf ppf "[%a]" expr e
   | Lprim (p, el) ->
@@ -100,6 +100,8 @@ let rec stmt ppf = function
     fprintf ppf "@[<v 3>{{ %a@;<0 -3>}}@]" stmt s
   | Lexit n ->
     fprintf ppf "exit %i;" n
+  | Llet (id, e, s) ->
+    fprintf ppf "var %a = %a;@ %a" Ident.print id expr e stmt s
   | Lseq (s1, s2) ->
     fprintf ppf "%a@ %a" seq s1 seq s2
   | Lreturn None ->
@@ -114,8 +116,14 @@ and seq ppf = function
     stmt ppf s
 
 let lambda_fun ppf (Lfun (id, args, body)) =
-  let prargs ppf args = List.iter (fun arg -> fprintf ppf "@ %a" Ident.print arg) args in
-  fprintf ppf "@[<v>%a@,{@;<0 2>@[<v>%a@]@,}@]@." Ident.print id stmt body
+  let prargs ppf = function
+    | [] -> ()
+    | id :: [] ->
+      Ident.print ppf id
+    | id :: ids ->
+      Ident.print ppf id; List.iter (fun arg -> fprintf ppf ", %a" Ident.print arg) ids
+  in
+  fprintf ppf "@[<v>%a(%a)@,{@;<0 2>@[<v>%a@]@,}@]@." Ident.print id prargs args stmt body
 
 let program ppf fns =
   List.iter (lambda_fun ppf) fns

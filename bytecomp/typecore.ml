@@ -64,7 +64,7 @@ let type_of_constant = function
     
 type value_description =
   | Val_fun of type_expr list * type_expr * Ident.t
-  | Val_var of type_expr * Ident.t * int
+  | Val_var of type_expr * Ident.t
   | Val_type of type_expr
 
 type struct_body =
@@ -74,14 +74,14 @@ type struct_body =
 type venv = value_description Tbl.t
 type tenv = struct_body Tbl.t
 
-let add_var id t off venv =
+let add_var id t venv =
   let id1 = Ident.fresh id.txt in
-  id1, Tbl.add id.txt (Val_var (t, id1, off)) venv
+  id1, Tbl.add id.txt (Val_var (t, id1)) venv
 
 let find_var id venv =
   try
     match Tbl.find id.txt venv with
-    | Val_var (t, id, off) -> id, t, off
+    | Val_var (t, id) -> id, t
     | _ -> raise Not_found
   with
   | Not_found ->
@@ -260,8 +260,8 @@ let rec rexpr venv tenv e =
 and lexpr venv tenv e =
   match e.txt with
   | Pexp_ident vid ->
-    let vid, t, off = find_var vid venv in
-    Lstackaddr off, t
+    let vid, t = find_var vid venv in
+    Lident vid, t
   | Pexp_field (e, fid) ->
     let rexp, sid = struct_rexpr venv tenv e in
     let t, i = index_of tenv sid fid in
@@ -307,15 +307,15 @@ and small_expr loc (lam, t) =
   if is_large t then raise (Error (loc, Illegal_large_type t));
   lam, t
 
-let rec stmt rt venv tenv inloop sz s =
+let rec stmt rt venv tenv inloop s =
   match s with
   | Pstm_empty ->
     Lempty
   | Pstm_assignop (e1, op, e2) ->
     let e1, t = small_expr e1.loc (lexpr venv tenv e1) in
     let e2 = rexpr_with_type t venv tenv e2 in
-    Lseq (Lstore (Lstackaddr sz, e1),
-          Lstore (Lload (Lstackaddr sz), Lbinop (Lload (Lstackaddr sz), Bop_arith op, e2)))
+    let id = Ident.fresh "tmp" in
+    Llet (id, e1, Lstore (Lload (Lident id), Lbinop (Lload (Lident id), Bop_arith op, e2)))
   | Pstm_assign (e1, e2) ->
     let e1, t = small_expr e1.loc (lexpr venv tenv e1) in
     let e2 = rexpr_with_type t venv tenv e2 in
@@ -330,17 +330,17 @@ let rec stmt rt venv tenv inloop sz s =
       | Some e -> rexpr_with_type t venv tenv e
       | None -> Lconst (default_init tenv t)
     in
-    let v, venv = add_var id t sz venv in
-    let s = stmt rt venv tenv inloop (sz+1) s in
-    Lseq (Lstore (Lstackaddr sz, e), s)
+    let v, venv = add_var id t venv in
+    let s = stmt rt venv tenv inloop s in
+    Llet (v, e, s)
   | Pstm_ifthenelse (e, s1, s2) ->
     let e = rexpr_with_type Tbool venv tenv e in
-    let s1 = stmt rt venv tenv inloop sz s1 in
-    let s2 = stmt rt venv tenv inloop sz s2 in
+    let s1 = stmt rt venv tenv inloop s1 in
+    let s2 = stmt rt venv tenv inloop s2 in
     Lifthenelse (e, s1, s2)
   | Pstm_while (e, s) ->
     let e = rexpr_with_type Tbool venv tenv e in
-    let s = stmt rt venv tenv true sz s in
+    let s = stmt rt venv tenv true s in
     Lblock (Lloop (Lblock (Lifthenelse (e, s, Lexit 1))))
   | Pstm_return None ->
     assert (rt = Tvoid); (* FIXME *)
@@ -349,8 +349,8 @@ let rec stmt rt venv tenv inloop sz s =
     let e = rexpr_with_type rt venv tenv e in
     Lreturn (Some e)
   | Pstm_seq (s1, s2) ->
-    let lam1 = stmt rt venv tenv inloop sz s1 in
-    let lam2 = stmt rt venv tenv inloop sz s2 in
+    let lam1 = stmt rt venv tenv inloop s1 in
+    let lam2 = stmt rt venv tenv inloop s2 in
     Lseq (lam1, lam2)
   | Pstm_assert e ->
     let lam = rexpr_with_type Tbool venv tenv e in
@@ -385,10 +385,10 @@ let defn venv tenv d =
     let rt = tp venv rt in
     assert (not (is_large rt)); (* FIXME *)
     let id, venv0 = add_fun id ats rt venv in
-    let ids, venv, arity = List.fold_left2 (fun (ids, venv, sz) (_, id) t ->
-        let id, venv = add_var id t sz venv in id :: ids, venv, sz+1) ([], venv0, 0) args ats in
-    let body = stmt rt venv tenv false arity body in
-    outfuns := Lfun (id, arity, body) :: !outfuns;
+    let ids, venv = List.fold_left2 (fun (ids, venv) (_, id) t ->
+        let id, venv = add_var id t venv in id :: ids, venv) ([], venv0) args ats in
+    let body = stmt rt venv tenv false body in
+    outfuns := Lfun (id, ids, body) :: !outfuns;
     venv0, tenv
   | Pdef_type (t, id) ->
     add_type id (tp venv t) venv, tenv
