@@ -159,7 +159,7 @@ let rec comp_stmt env s lexit cont =
   | Lstore (Lstackaddr off, e) ->
     comp_expr env e (Kstorei off :: cont)
   | Lstore (e1, e2) ->
-    comp_expr env e1 (comp_expr env e2 (Kstore :: cont))
+    comp_expr env e1 (Kpush :: comp_expr env e2 (Kstore :: cont))
   | Lexpr e ->
     comp_expr env e cont
   | Lifthenelse (e1, e2, e3) ->
