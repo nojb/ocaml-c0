@@ -19,33 +19,14 @@
    IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. *)
 
-type t = {
-  loc_start : Lexing.position;
-  loc_end : Lexing.position
-}
+module type Bytecomp_options = sig
+  val _dparsetree : unit -> unit
+  val _dlambda : unit -> unit
+  val _dinstr : unit -> unit
+end
 
-let dummy = {
-  loc_start = Lexing.dummy_pos;
-  loc_end = Lexing.dummy_pos
-}
+module type Arg_list = sig
+  val list : (string * Arg.spec * string) list
+end
 
-let symbol_loc () =
-  { loc_start = Parsing.symbol_start_pos ();
-    loc_end = Parsing.symbol_end_pos () }
-
-let curr lexbuf =
-  { loc_start = lexbuf.Lexing.lex_start_p;
-    loc_end = lexbuf.Lexing.lex_curr_p }
-
-let rhs_loc i = {
-  loc_start = Parsing.rhs_start_pos i;
-  loc_end = Parsing.rhs_end_pos i
-}
-
-open Format
-
-let print_error ppf loc =
-  assert false
-
-let report_error loc ?sub ?if_highlight fmt =
-  fprintf err_formatter (fmt ^^ "@.")
+module Make_bytecomp_options (F : Bytecomp_options) : Arg_list

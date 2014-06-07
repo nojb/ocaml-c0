@@ -19,22 +19,6 @@
    IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. *)
 
-type t = {
-  loc_start : Lexing.position;
-  loc_end : Lexing.position
-}
-
-val dummy : t
-
-val symbol_loc : unit -> t
-
-val curr : Lexing.lexbuf -> t
-
-val rhs_loc : int -> t
-
-open Format
-
-val print_error : formatter -> t -> unit
-
-val report_error : t -> ?sub:(t * string) list -> ?if_highlight:string ->
-  ('a, formatter, unit) format -> 'a
+let dump_parsetree = ref false       (* -dparsetree *)
+let dump_lambda = ref false          (* -dlambda *)
+let dump_instr = ref false           (* -dinstr *)

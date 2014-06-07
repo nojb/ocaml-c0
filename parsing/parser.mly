@@ -104,8 +104,8 @@ let const_int n = mkdummyloc (Pexp_const (Const_int (Nativeint.of_int n)))
 %token VOID
 %token WHILE
 
-%type <Parsetree.defn list> program
-%start program
+%type <Parsetree.defn list> implementation
+%start implementation
 
 %right QUESTION
 %left BARBAR
@@ -123,7 +123,7 @@ let const_int n = mkdummyloc (Pexp_const (Const_int (Nativeint.of_int n)))
 
 %%
 
-program
+implementation
   : x = list(gdefn) EOF
     { x }
   ;
