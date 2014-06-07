@@ -64,6 +64,7 @@ let rec branch_to_cont2 lbl n cont = function
   | Klabel _ :: c -> branch_to_cont2 lbl n cont c
   | Kpop m :: c -> branch_to_cont2 lbl (n+m) cont c
   | Kreturn m :: _ -> (Kreturn (n+m), cont)
+  | Kstop :: _ -> (Kstop, cont)
   | _ ->
     match lbl with
     | Some lbl ->
@@ -76,6 +77,7 @@ let branch_to_cont cont =
   match cont with
   | (Kbranch _ as br) :: _ -> br, cont
   | (Kreturn _ as ret) :: _ -> ret, cont
+  | Kstop as st :: _ -> st, cont (* ??? CHECK *)
   | Klabel lbl :: _ -> branch_to_cont2 (Some lbl) 0 cont cont
   | _ -> branch_to_cont2 None 0 cont cont
 
@@ -107,6 +109,7 @@ let rec is_tailcall = function
   | Kreturn _ :: _ -> true
   | Klabel _ :: c -> is_tailcall c
   | Kpop _ :: c -> is_tailcall c
+  | Kstop _ :: _ -> true
   | _ -> false
 
 let comp_primitive = function
