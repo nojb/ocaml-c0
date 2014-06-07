@@ -121,7 +121,7 @@ and seq ppf = function
 
 let lambda_fun ppf (Lfun (id, args, body)) =
   let prargs ppf args = List.iter (fun arg -> fprintf ppf "@ %a" Ident.print arg) args in
-  fprintf ppf "@[<v>%a@,{@;<0 2>@[%a@]@,}@]@." Ident.print id stmt body
+  fprintf ppf "@[<v>%a@,{@;<0 2>@[<v>%a@]@,}@]@." Ident.print id stmt body
 
 let program ppf fns =
   List.iter (lambda_fun ppf) fns
