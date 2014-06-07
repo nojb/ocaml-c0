@@ -106,6 +106,8 @@ let rec comp_expr env e cont =
     Kconst cst :: cont
   | Lstackaddr off ->
     Kaccess off :: cont
+  | Lload (Lstackaddr off) ->
+    Kloadi off :: cont
   | Lload e ->
     comp_expr env e (Kload :: cont)
   | Lprim (p, args) ->
@@ -151,6 +153,8 @@ let rec comp_stmt env s lexit cont =
   match s with
   | Lempty ->
     cont
+  | Lstore (Lstackaddr off, e) ->
+    comp_expr env e (Kstorei off :: cont)
   | Lstore (e1, e2) ->
     comp_expr env e1 (comp_expr env e2 (Kstore :: cont))
   | Lexpr e ->

@@ -26,7 +26,8 @@ let instruction ppf = function
   | Klabel lbl -> fprintf ppf "L%i:" lbl
   | Kconst cst -> fprintf ppf "\tconst %a" Asttypes.print_constant cst
   | Kaccess n -> fprintf ppf "\taccess %i" n
-  | Kassign n -> fprintf ppf "\tassign %i" n
+  | Kloadi off -> fprintf ppf "\tloadi %i" off
+  | Kstorei off -> fprintf ppf "\tstorei %i" off
   | Kload -> fprintf ppf "\tload"
   | Kstore -> fprintf ppf "\tstore"
   | Kpush -> fprintf ppf "\tpush"

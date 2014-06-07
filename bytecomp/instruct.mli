@@ -27,7 +27,8 @@ type instruction =
   | Klabel of label
   | Kconst of constant
   | Kaccess of int
-  | Kassign of int
+  | Kloadi of int
+  | Kstorei of int
   | Kload
   | Kstore
   | Kpush
