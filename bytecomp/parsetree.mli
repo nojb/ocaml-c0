@@ -40,22 +40,21 @@ type tp =
 type expr =
   | Pexp_const of constant
   | Pexp_ident of string loc
-  | Pexp_getfield of expr loc * string loc
-  | Pexp_get of expr loc * expr loc
-  | Pexp_getptr of expr loc
+  | Pexp_field of expr loc * string loc
+  | Pexp_index of expr loc * expr loc
+  | Pexp_deref of expr loc
   | Pexp_binop of expr loc * binary_operator * expr loc
   | Pexp_unop of unary_operator * expr loc
   | Pexp_cond of expr loc * expr loc * expr loc
   | Pexp_call of string loc * expr loc list
   | Pexp_alloc of tp
   | Pexp_allocarray of tp * expr loc
-
+  | Pexp_valof of expr loc
+        
 type stmt =
   | Pstm_empty
-  | Pstm_assign of string loc * asnop * expr loc
-  | Pstm_setfield of expr loc * string loc * asnop * expr loc
-  | Pstm_set of expr loc * expr loc * asnop * expr loc
-  | Pstm_setptr of expr loc * asnop * expr loc
+  | Pstm_assign of expr loc * expr loc
+  | Pstm_assignop of expr loc * arith_operator * expr loc
   | Pstm_expr of expr loc
   | Pstm_def of tp * string loc * expr loc option * stmt
   | Pstm_ifthenelse of expr loc * stmt * stmt

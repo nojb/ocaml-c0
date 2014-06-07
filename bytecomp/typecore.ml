@@ -64,7 +64,7 @@ let type_of_constant = function
     
 type value_description =
   | Val_fun of type_expr list * type_expr * Ident.t
-  | Val_var of type_expr * Ident.t
+  | Val_var of type_expr * Ident.t * int
   | Val_type of type_expr
 
 type struct_body =
@@ -74,14 +74,14 @@ type struct_body =
 type venv = value_description Tbl.t
 type tenv = struct_body Tbl.t
 
-let add_var id t venv =
+let add_var id t off venv =
   let id1 = Ident.fresh id.txt in
-  id1, Tbl.add id.txt (Val_var (t, id1)) venv
+  id1, Tbl.add id.txt (Val_var (t, id1, off)) venv
 
 let find_var id venv =
   try
     match Tbl.find id.txt venv with
-    | Val_var (t, id) -> id, t
+    | Val_var (t, id, off) -> id, t, off
     | _ -> raise Not_found
   with
   | Not_found ->
@@ -187,9 +187,8 @@ let add e1 e2 =
   | Lconst (Const_int 0n), e1 -> e1
   | e1, e2 -> Lprim (Paddint, [e1; e2])
 
-let load_if_small t start off =
-  if is_large t then add start off
-  else Lprim (Pload, [start; off])
+let load_if_small t e =
+  if is_large t then e else Lload e
 
 let comp_arithop = function
   | Aop_add -> Paddint
@@ -208,22 +207,25 @@ let rec expr venv tenv e =
   | Pexp_const cst ->
     Lconst cst, type_of_constant cst
   | Pexp_ident vid ->
-    let vid, t = find_var vid venv in
-    Lident vid, t
-  | Pexp_getfield (e, fid) ->
+    let vid, t, off = find_var vid venv in
+    Lstackaddr off, t
+  | Pexp_field (e, fid) ->
     let rexp, sid = struct_expr venv tenv e in
     let t, i = index_of tenv sid fid in
     let tsz = size_of tenv t in
-    load_if_small t rexp (const_int (tsz * i)), t
-  | Pexp_get (e1, e2) ->
+    add rexp (const_int (tsz * i)), t
+  | Pexp_index (e1, e2) ->
     let aexp, elty = array_expr venv tenv e1 in
     let tsz = size_of tenv elty in
     let iexp = expr_with_type Tint venv tenv e2 in
     let lnum = e2.loc.Location.loc_start.Lexing.pos_lnum in
-    load_if_small elty aexp (mul iexp (const_int tsz)), elty
-  | Pexp_getptr e ->
+    add aexp (mul iexp (const_int tsz)), elty
+  | Pexp_deref e ->
     let e, t = pointer_expr venv tenv e in
-    load_if_small t e (const_int 0), t
+    e, t
+  | Pexp_valof e ->
+    let e, t = expr venv tenv e in
+    load_if_small t e, t
   | Pexp_binop (e1, Bop_arith op, e2) ->
     let e1 = expr_with_type Tint venv tenv e1 in
     let e2 = expr_with_type Tint venv tenv e2 in
@@ -244,6 +246,7 @@ let rec expr venv tenv e =
             failwith "eq neq"
         end
       | _ ->
+        (* FIXME ok for chars as well *)
         let e1 = expr_with_type Tint venv tenv e1 in
         let e2 = expr_with_type Tint venv tenv e2 in
         Lprim (Pintcomp op, [e1; e2]), Tbool
@@ -255,7 +258,7 @@ let rec expr venv tenv e =
     let e1 = expr_with_type Tbool venv tenv e1 in
     let e2, t = small_expr venv tenv e2 in
     let e3 = expr_with_type t venv tenv e3 in
-    Lifthenelse (e1, e2, e3), t
+    Lcond (e1, e2, e3), t
   | Pexp_call (id, args) ->
     let atyps, rtyp, id1 = find_fun id venv in
     let check_arg a typ = expr_with_type typ venv tenv a in
@@ -302,71 +305,22 @@ and small_expr venv tenv e =
   if is_large t then raise (Error (e.loc, Illegal_large_type t));
   lam, t
 
-let rec stmt rt venv tenv inloop s =
+let rec stmt rt venv tenv inloop sz s =
   match s with
-  | Pstm_empty -> const_int 0
-  | Pstm_assign (id, ArithAssign op, e) ->
-    let id1, t = find_var id venv in
-    if is_large t then raise (Error (id.loc, Illegal_large_type t));
-    let e = expr_with_type t venv tenv e in
-    Lassign (id1, Lprim (comp_arithop op, [Lident id1; e]))
-  | Pstm_assign (id, Assign, e) ->
-    let id1, t = find_var id venv in
-    if is_large t then raise (Error (id.loc, Illegal_large_type t));
-    let e = expr_with_type t venv tenv e in
-    Lassign (id1, e)
-  | Pstm_setfield (e1, fid, ArithAssign op, e2) ->
-    let e1, sid = struct_expr venv tenv e1 in
-    let t, i = index_of tenv sid fid in
-    (* FIXME check t = Tint *)
-    if t <> Tint then raise (Error (fid.loc, Type_mismatch (t, Tint)));
+  | Pstm_empty ->
+    Lempty
+  | Pstm_assignop (e1, op, e2) ->
+    let e1, t = small_expr venv tenv e1 in
     let e2 = expr_with_type t venv tenv e2 in
-    let str = Ident.fresh "str" in
-    Ldef (str, e1, Lprim (Pstore, [Lident str; const_int i; Lprim (comp_arithop op, [Lident str; e2])]))
-  | Pstm_setfield (e1, fid, Assign, e2) ->
-    let e1, sid = struct_expr venv tenv e1 in
-    let t, i = index_of tenv sid fid in
-    if is_large t then raise (Error (fid.loc, Illegal_large_type t));
+    Lseq (Lstore (Lstackaddr sz, e1),
+          Lstore (Lload (Lstackaddr sz), Lprim (comp_arithop op, [Lload (Lstackaddr sz); e2])))
+  | Pstm_assign (e1, e2) ->
+    let e1, t = small_expr venv tenv e1 in
     let e2 = expr_with_type t venv tenv e2 in
-    Lprim (Pstore, [e1; const_int i; e2])
-  | Pstm_set (e1, e2, ArithAssign op, e3) ->
-    let aexp, elty = array_expr venv tenv e1 in
-    if elty <> Tint then raise (Error (e1.loc, Type_mismatch (elty, Tint)));
-    (* FIXME check elty = Tint *)
-    let tsz = size_of tenv elty in
-    let iexp = expr_with_type Tint venv tenv e2 in
-    let oexp = expr_with_type elty venv tenv e3 in
-    let lnum = e2.loc.Location.loc_start.Lexing.pos_lnum in
-    let arr = Ident.fresh "arr" in
-    let idx = Ident.fresh "idx" in
-    Ldef (arr, aexp,
-          Ldef (idx, mul iexp (const_int tsz), Lprim
-                  (Pstore,
-                   [Lident arr; Lident idx;
-                    Lprim (comp_arithop op, [Lprim (Pload, [Lident arr; Lident idx]); oexp])])))
-  | Pstm_set (e1, e2, Assign, e3) ->
-    let aexp, elty = array_expr venv tenv e1 in
-    if is_large elty then raise (Error (e1.loc, Illegal_large_type elty)); (* FIXME loc *)
-    (* let tsz = size_of tenv elty in *)
-    let iexp = expr_with_type Tint venv tenv e2 in
-    let oexp = expr_with_type elty venv tenv e3 in
-    let lnum = e2.loc.Location.loc_start.Lexing.pos_lnum in
-    Lprim (Pstore, [aexp; iexp; oexp])
-  | Pstm_setptr (e1, ArithAssign op, e2) ->
-    let e11, t = pointer_expr venv tenv e1 in
-    if t <> Tint then raise (Error (e1.loc, Type_mismatch (t, Tint)));
-    (* FIXME check t = Tint *)
-    let e2 = expr_with_type t venv tenv e2 in
-    let ptr = Ident.fresh "ptr" in
-    Ldef (ptr, e11, Lprim (Pstore, [Lident ptr; const_int 0; Lprim (comp_arithop op, [Lident ptr; e2])]))
-  | Pstm_setptr (e1, Assign, e2) ->
-    let e1, t = pointer_expr venv tenv e1 in
-    if is_large t then raise (Error (e2.loc, Illegal_large_type t)); (* FIXME loc *)
-    let e2 = expr_with_type t venv tenv e2 in
-    Lprim (Pstore, [e1; const_int 0; e2])
+    Lstore (e1, e2)
   | Pstm_expr e ->
     let e, _ = expr venv tenv e in
-    e
+    Lexpr e
   | Pstm_def (t, id, e, s) ->
     let t = tp venv t in
     if is_large t then raise (Error (id.loc, Illegal_large_type t));
@@ -374,17 +328,17 @@ let rec stmt rt venv tenv inloop s =
       | Some e -> expr_with_type t venv tenv e
       | None -> Lconst (default_init tenv t)
     in
-    let v, venv = add_var id t venv in
-    let s = stmt rt venv tenv inloop s in
-    Ldef (v, e, s)
+    let v, venv = add_var id t sz venv in
+    let s = stmt rt venv tenv inloop (sz+1) s in
+    Lseq (Lstore (Lstackaddr sz, e), s)
   | Pstm_ifthenelse (e, s1, s2) ->
     let e = expr_with_type Tbool venv tenv e in
-    let s1 = stmt rt venv tenv inloop s1 in
-    let s2 = stmt rt venv tenv inloop s2 in
+    let s1 = stmt rt venv tenv inloop sz s1 in
+    let s2 = stmt rt venv tenv inloop sz s2 in
     Lifthenelse (e, s1, s2)
   | Pstm_while (e, s) ->
     let e = expr_with_type Tbool venv tenv e in
-    let s = stmt rt venv tenv true s in
+    let s = stmt rt venv tenv true sz s in
     Lblock (Lloop (Lblock (Lifthenelse (e, s, Lexit 1))))
   | Pstm_return None ->
     assert (rt = Tvoid); (* FIXME *)
@@ -393,17 +347,17 @@ let rec stmt rt venv tenv inloop s =
     let e = expr_with_type rt venv tenv e in
     Lreturn (Some e)
   | Pstm_seq (s1, s2) ->
-    let lam1 = stmt rt venv tenv inloop s1 in
-    let lam2 = stmt rt venv tenv inloop s2 in
+    let lam1 = stmt rt venv tenv inloop sz s1 in
+    let lam2 = stmt rt venv tenv inloop sz s2 in
     Lseq (lam1, lam2)
   | Pstm_assert e ->
     let lam = expr_with_type Tbool venv tenv e in
     let lnum = e.loc.Location.loc_start.Lexing.pos_lnum in
-    Lifthenelse (lam, Lprim (Perror lnum, [Lconst (Const_string "Assertion failed")]), const_int 0)
+    Lifthenelse (lam, Lexpr (Lprim (Perror lnum, [Lconst (Const_string "Assertion failed")])), Lempty)
   | Pstm_error e ->
     let lam = expr_with_type Tstring venv tenv e in
     let lnum = e.loc.Location.loc_start.Lexing.pos_lnum in
-    Lprim (Perror lnum, [lam])
+    Lexpr (Lprim (Perror lnum, [lam]))
   | Pstm_break ->
     if inloop then Lexit 1
     else raise (Error (Location.dummy, Illegal_break))
@@ -429,10 +383,10 @@ let defn venv tenv d =
     let rt = tp venv rt in
     assert (not (is_large rt)); (* FIXME *)
     let id, venv0 = add_fun id ats rt venv in
-    let ids, venv = List.fold_left2 (fun (ids, venv) (_, id) t ->
-        let id, venv = add_var id t venv in id :: ids, venv) ([], venv0) args ats in
-    let body = stmt rt venv tenv false body in
-    outfuns := Lfun (id, List.rev ids, body) :: !outfuns;
+    let ids, venv, arity = List.fold_left2 (fun (ids, venv, sz) (_, id) t ->
+        let id, venv = add_var id t sz venv in id :: ids, venv, sz+1) ([], venv0, 0) args ats in
+    let body = stmt rt venv tenv false arity body in
+    outfuns := Lfun (id, arity, body) :: !outfuns;
     venv0, tenv
   | Pdef_type (t, id) ->
     add_type id (tp venv t) venv, tenv

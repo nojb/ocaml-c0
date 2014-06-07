@@ -104,15 +104,18 @@ let rec expr i ppf e =
   | Pexp_call (id, el) ->
     line i ppf "Pexp_call %a\n" fmt_string_loc id;
     list i expr ppf el
-  | Pexp_getfield (e, id) ->
-    line i ppf "Pexp_getfield %a\n" fmt_string_loc id;
+  | Pexp_field (e, id) ->
+    line i ppf "Pexp_field %a\n" fmt_string_loc id;
     expr i ppf e
-  | Pexp_get (e1, e2) ->
-    line i ppf "Pexp_get\n";
+  | Pexp_index (e1, e2) ->
+    line i ppf "Pexp_index\n";
     expr i ppf e1;
     expr i ppf e2
-  | Pexp_getptr e ->
-    line i ppf "Pexp_getptr\n";
+  | Pexp_deref e ->
+    line i ppf "Pexp_deref\n";
+    expr i ppf e
+  | Pexp_valof e ->
+    line i ppf "Pexp_valof\n";
     expr i ppf e
   | Pexp_alloc t ->
     line i ppf "Pexp_alloc\n";
@@ -128,20 +131,12 @@ let rec stmt i ppf s =
   match s with
   | Pstm_empty ->
     line i ppf "Pstm_empty\n"
-  | Pstm_assign (id, op, e) ->
-    line i ppf "Pstm_assign %a %S\n" fmt_string_loc id (string_of_asnop op);
-    expr i ppf e
-  | Pstm_setfield (e1, id, op, e2) ->
-    line i ppf "Pstm_setfield %a %S\n" fmt_string_loc id (string_of_asnop op);
+  | Pstm_assignop (e1, op, e2) ->
+    line i ppf "Pstm_assignop %S\n" (string_of_arith_operator op);
     expr i ppf e1;
     expr i ppf e2
-  | Pstm_set (e1, e2, op, e3) ->
-    line i ppf "Pstm_set %S\n" (string_of_asnop op);
-    expr i ppf e1;
-    expr i ppf e2;
-    expr i ppf e3
-  | Pstm_setptr (e1, op, e2) ->
-    line i ppf "Pstm_setptr %S\n" (string_of_asnop op);
+  | Pstm_assign (e1, e2) ->
+    line i ppf "Pstm_assign\n";
     expr i ppf e1;
     expr i ppf e2
   | Pstm_expr e ->

@@ -36,23 +36,26 @@ type primitive =
   | Pxorint
   | Pnegint
   | Pintcomp of comparison
-  | Pload
-  | Pstore
   | Perror of int
     
-type lambda =
+type expr =
   | Lconst of constant
-  | Lident of Ident.t
-  | Lassign of Ident.t * lambda
-  | Lifthenelse of lambda * lambda * lambda
-  | Lprim of primitive * lambda list
-  | Lcall of Ident.t * lambda list
-  | Lloop of lambda
-  | Lblock of lambda
+  | Lstackaddr of int
+  | Lload of expr
+  | Lprim of primitive * expr list
+  | Lcall of Ident.t * expr list
+  | Lcond of expr * expr * expr
+             
+type stmt =
+  | Lempty
+  | Lstore of expr * expr
+  | Lexpr of expr
+  | Lifthenelse of expr * stmt * stmt
+  | Lloop of stmt
+  | Lblock of stmt
   | Lexit of int
-  | Lseq of lambda * lambda
-  | Ldef of Ident.t * lambda * lambda
-  | Lreturn of lambda option
+  | Lseq of stmt * stmt
+  | Lreturn of expr option
 
 type lambda_fun =
-  Lfun of Ident.t * Ident.t list * lambda
+  Lfun of Ident.t * int * stmt

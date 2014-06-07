@@ -23,73 +23,105 @@ open Format
 open Asttypes
 open Lambda
 
-let primitive ppf = function
-  | Palloc n -> fprintf ppf "alloc %i" n
-  | Pallocarray n -> fprintf ppf "allocarray %i" n
-  | Paddint -> fprintf ppf "+"
-  | Psubint -> fprintf ppf "-"
-  | Pmulint -> fprintf ppf "*"
-  | Pdivint -> fprintf ppf "/"
-  | Pmodint -> fprintf ppf "mod"
-  | Plslint -> fprintf ppf "lsl"
-  | Pasrint -> fprintf ppf "asr"
-  | Pandint -> fprintf ppf "land"
-  | Porint -> fprintf ppf "lor"
-  | Pxorint -> fprintf ppf "lxor"
-  | Pnegint -> fprintf ppf "-"
-  | Pintcomp op -> fprintf ppf "%s" (string_of_binary_operator (Bop_cmp op))
-  | Pload -> fprintf ppf "load"
-  | Pstore -> fprintf ppf "store"
-  | Perror l -> fprintf ppf "error %i" l
+let string_of_primitive = function
+  (* | Palloc n -> "alloc" *)
+  (* | Pallocarray n -> fprintf ppf "allocarray %i" n *)
+  | Paddint -> "+"
+  | Psubint -> "-"
+  | Pmulint -> "*"
+  | Pdivint -> "/"
+  | Pmodint -> "%"
+  | Plslint -> "<<"
+  | Pasrint -> ">>"
+  | Pandint -> "&"
+  | Porint -> "|"
+  | Pxorint -> "^"
+  | Pnegint -> "-"
+  | Pintcomp op -> string_of_binary_operator (Bop_cmp op)
+  (* | Perror l -> fprintf ppf "error<%i>" l *)
 
-let rec lambda ppf = function
+type associativity = LtoR | RtoL | NA
+
+let precedence = function
+  | Lconst _
+  | Lstackaddr _ -> (16, NA)
+  | Lload _ -> (15, RtoL)
+  | Lprim (Pmulint, _)
+  | Lprim (Pdivint, _)
+  | Lprim (Pmodint, _) -> (13, LtoR)
+  | Lprim (Paddint, _)
+  | Lprim (Psubint, _) -> (12, LtoR)
+  | Lprim (Plslint, _)
+  | Lprim (Pasrint, _) -> (10, LtoR)
+  | Lprim (Pintcomp _, _) -> (10, LtoR)
+  | Lprim (Pandint, _) -> (8, LtoR)
+  | Lprim (Pxorint, _) -> (7, LtoR)
+  | Lprim (Porint, _) -> (6, LtoR)
+
+let rec expr1 ppf (prec, e) =
+  let prec', assoc = precedence e in
+  let prec1, prec2 =
+    if assoc = LtoR then (prec', prec' + 1) else (prec' + 1, prec')
+  in
+  if prec' < prec then fprintf ppf "@[<hov 2>(" else fprintf ppf "@[<hov 2>";
+  begin match e with
   | Lconst cst ->
     print_constant ppf cst
-  | Lident id ->
-    Ident.print ppf id
-  | Lassign (id, e) ->
-    fprintf ppf "@[<2>(assign@ %a@ %a)@]" Ident.print id lambda e
-  | Lifthenelse (e1, e2, e3) ->
-    fprintf ppf "@[<2>(if@ %a@ %a@ %a)@]" lambda e1 lambda e2 lambda e3
-  | Lprim (p, args) ->
-    let lams ppf largs = List.iter (fun l -> fprintf ppf "@ %a" lambda l) largs in
-    fprintf ppf "@[<2>(%a%a)@]" primitive p lams args
-  | Lcall (id, args) ->
-    let lams ppf largs = List.iter (fun l -> fprintf ppf "@ %a" lambda l) largs in
-    fprintf ppf "@[<2>(%a%a)@]" Ident.print id lams args
-  | Lloop lam ->
-    fprintf ppf "@[<2>(loop@ %a)@]" lambda lam
-  | Lblock lam ->
-    fprintf ppf "@[<2>(block@ %a)@]" lambda lam
-  | Lexit n ->
-    fprintf ppf "@[<2>(exit@ %i)@]" n
-  | Lseq (e1, e2) ->
-    fprintf ppf "@[<2>(seq@ %a@ %a)@]" lambda e1 sequence e2
-  | Ldef (id, e1, e2) ->
-    fprintf ppf "@[<2>(def@ @[<hv 1>(@[<2>%a@ %a@]" Ident.print id lambda e1;
-    let rec letbody = function
-      | Ldef (id, e1, e2) ->
-        fprintf ppf "@ @[<2>%a@ %a@]" Ident.print id lambda e1;
-        letbody e2
-      | _ as e -> e
-    in
-    let e = letbody e2 in
-    fprintf ppf ")@]@ %a)@]" lambda e  
-  | Lreturn None ->
-    fprintf ppf "(return)"
-  | Lreturn (Some e) ->
-    fprintf ppf "@[<2>(return@ %a)@]" lambda e
+  | Lstackaddr off ->
+    fprintf ppf "&%i" off
+  | Lload e ->
+    fprintf ppf "[%a]" expr e
+  | Lprim (op, [e1; e2]) ->
+    fprintf ppf "%a@ %s %a" expr1 (prec1, e1) (string_of_primitive op) expr1 (prec2, e2)
+  | Lcall (id, el) ->
+    fprintf ppf "%a(%a)" Ident.print id args el
+  | Lcond (e1, e2, e3) ->
+    fprintf ppf "%a ?@ %a :@ %a" expr e1 expr e2 expr e3
+  end;
+  if prec' < prec then fprintf ppf ")@]" else fprintf ppf "@]"
       
-and sequence ppf = function
-  | Lseq (e1, e2) ->
-    fprintf ppf "%a@ %a" sequence e1 sequence e2
-  | _ as e ->
-    lambda ppf e
+and args ppf = function
+  | [] -> ()
+  | e :: [] ->
+    expr ppf e
+  | e :: el ->
+    fprintf ppf "%a" expr e;
+    List.iter (fun e -> fprintf ppf ",@ %a" expr e) el
+
+and expr ppf e =
+  expr1 ppf (0, e)
+
+let rec stmt ppf = function
+  | Lempty -> ()
+  | Lstore (e1, e2) ->
+    fprintf ppf "@[<hv 2>[%a] =@ %a;@]" expr e1 expr e2
+  | Lexpr e ->
+    fprintf ppf "%a;" expr e
+  | Lifthenelse (e1, s1, s2) ->
+    fprintf ppf "@[<v 2>if (%a) {@ %a@;<1 -2>} else {@ %a@;<1 -2>}@]"
+      expr e1 stmt s1 stmt s2
+  | Lloop s ->
+    fprintf ppf "@[<v 2>loop {@ %a@;<1 -2>}@]" stmt s
+  | Lblock s ->
+    fprintf ppf "@[<v 3>{{ %a@;<0 -3>}}@]" stmt s
+  | Lexit n ->
+    fprintf ppf "exit %i;" n
+  | Lseq (s1, s2) ->
+    fprintf ppf "%a@ %a" seq s1 seq s2
+  | Lreturn None ->
+    fprintf ppf "return;"
+  | Lreturn (Some e) ->
+    fprintf ppf "return %a;" expr e
+
+and seq ppf = function
+  | Lseq (s1, s2) ->
+    fprintf ppf "%a@ %a" seq s1 seq s2
+  | _ as s ->
+    stmt ppf s
 
 let lambda_fun ppf (Lfun (id, args, body)) =
   let prargs ppf args = List.iter (fun arg -> fprintf ppf "@ %a" Ident.print arg) args in
-  fprintf ppf "@[<2>(define@ (%a%a)@ %a)@]@." Ident.print id
-    prargs args lambda body
+  fprintf ppf "@[<v>%a@,{@;<0 2>@[%a@]@,}@]@." Ident.print id stmt body
 
 let program ppf fns =
   List.iter (lambda_fun ppf) fns

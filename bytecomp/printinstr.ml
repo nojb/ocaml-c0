@@ -47,8 +47,8 @@ let instruction ppf = function
   | Kxorint -> fprintf ppf "\txorint"
   | Knegint -> fprintf ppf "\tnegint"
   | Kreturn n -> fprintf ppf "\treturn %i" n
-  | Ktailcall (sz, nargs, lbl) -> fprintf ppf "\ttailcall %i, %i, L%i" sz nargs lbl
-  | Kcall lbl -> fprintf ppf "\tcall L%i" lbl
+  | Ktailcall (nargs, lbl) -> fprintf ppf "\ttailcall %i, L%i" nargs lbl
+  | Kcall (nargs, lbl) -> fprintf ppf "\tcall %i, L%i" nargs lbl
   | Kallocarray sz -> fprintf ppf "\tallocarray %i" sz
   | Kpush_retaddr lbl -> fprintf ppf "\tpush_retaddr L%i" lbl
                    

@@ -26,13 +26,29 @@ let expecting num name =
   let open Syntaxerr in
   raise (Error (Expecting (rhs_loc num, name)))
 
-let rec lvalue pos lv op e =
-  match lv with
-  | Pexp_ident id -> Pstm_assign (id, op, e)
-  | Pexp_getfield (e1, id) -> Pstm_setfield (e1, id, op, e)
-  | Pexp_get (e1, e2) -> Pstm_set (e1, e2, op, e)
-  | Pexp_getptr e1 -> Pstm_setptr (e1, op, e)
+let maptxt f e =
+  { e with txt = f e.txt }
+
+let rec lvalue pos = function
+  | Pexp_ident _ as e -> e
+  | Pexp_field (e, id) -> Pexp_field (maptxt rvalue e, id)
+  | Pexp_index (e1, e2) -> Pexp_index (maptxt rvalue e1, maptxt rvalue e2)
+  | Pexp_deref e -> Pexp_deref (maptxt rvalue e)
   | _ -> expecting pos "lvalue"
+
+and rvalue = function
+  | Pexp_const _ as e -> e
+  | Pexp_ident id -> Pexp_valof (mkdummyloc (Pexp_ident id))
+  | Pexp_field (e, id) -> Pexp_valof (mkdummyloc (Pexp_field (maptxt rvalue e, id)))
+  | Pexp_index (e1, e2) -> Pexp_valof (mkdummyloc (Pexp_index (maptxt rvalue e1, maptxt rvalue e2)))
+  | Pexp_deref e -> Pexp_valof (mkdummyloc (Pexp_deref (maptxt rvalue e)))
+  | Pexp_binop (e1, op, e2) -> Pexp_binop (maptxt rvalue e1, op, maptxt rvalue e2)
+  | Pexp_unop (op, e) -> Pexp_unop (op, maptxt rvalue e)
+  | Pexp_cond (e1, e2, e3) -> Pexp_cond (maptxt rvalue e1, maptxt rvalue e2, maptxt rvalue e3)
+  | Pexp_call (id, el) -> Pexp_call (id, List.map (maptxt rvalue) el)
+  | Pexp_alloc _ as e -> e
+  | Pexp_allocarray (t, e) -> Pexp_allocarray (t, maptxt rvalue e)
+  | Pexp_valof _ -> assert false
 
 let const_true = mkdummyloc (Pexp_const (Const_bool true))
 let const_false = mkdummyloc (Pexp_const (Const_bool false))
@@ -260,15 +276,15 @@ expr:
   | ident inparen_or_fail(expr_list)
     { mkloc (Pexp_call ($1, $2)) }
   | expr DOT ident_or_fail
-    { mkloc (Pexp_getfield ($1, $3)) }
+    { mkloc (Pexp_field ($1, $3)) }
   | expr ARROW ident_or_fail
-    { mkloc (Pexp_getfield (mkloc (Pexp_getptr $1), $3)) }
+    { mkloc (Pexp_field (mkloc (Pexp_deref $1), $3)) }
   | expr LBRACKET expr RBRACKET
-    { mkloc (Pexp_get ($1, $3)) }
+    { mkloc (Pexp_index ($1, $3)) }
   | expr LBRACKET expr error
     { unclosed "[" 2 "]" 4 }
   | STAR expr %prec prec_unary_op
-    { mkloc (Pexp_getptr $2) }
+    { mkloc (Pexp_deref $2) }
   | ALLOC inparen_or_fail(tp)
     { mkloc (Pexp_alloc $2) }
   | alloc_array
@@ -276,50 +292,60 @@ expr:
   ;
 
 alloc_array:
-    ALLOC_ARRAY LPAREN tp COMMA expr RPAREN
+    ALLOC_ARRAY LPAREN tp COMMA rvalue RPAREN
     { mkloc (Pexp_allocarray ($3, $5)) }
-  | ALLOC_ARRAY LPAREN tp COMMA expr error
+  | ALLOC_ARRAY LPAREN tp COMMA rvalue error
     { unclosed "(" 2 ")" 6 }
   ;
 
 %inline asnop:
     PLUSEQUAL
-    { ArithAssign Aop_add }
+    { Aop_add }
   | MINUSEQUAL
-    { ArithAssign Aop_sub }
+    { Aop_sub }
   | STAREQUAL
-    { ArithAssign Aop_mul }
+    { Aop_mul }
   | SLASHEQUAL
-    { ArithAssign Aop_div }
+    { Aop_div }
   | PERCENTEQUAL
-    { ArithAssign Aop_mod }
+    { Aop_mod }
   | LESSLESSEQUAL
-    { ArithAssign Aop_lsl }
+    { Aop_lsl }
   | GREATERGREATEREQUAL
-    { ArithAssign Aop_asr }
+    { Aop_asr }
   | AMPERSANDEQUAL
-    { ArithAssign Aop_and }
+    { Aop_and }
   | BAREQUAL
-    { ArithAssign Aop_or }
+    { Aop_or }
   | CARETEQUAL
-    { ArithAssign Aop_xor }
-  | EQUAL
-    { Assign }
+    { Aop_xor }
+  ;
+
+lvalue
+  : expr
+    { maptxt (lvalue 1) $1 }
+  ;
+
+rvalue
+  : expr
+    { maptxt rvalue $1 }
   ;
 
 simple:
-    lv = expr op = asnop e = expr
-    { lvalue 1 lv.txt op e }
-  | expr PLUSPLUS
-    { lvalue 1 $1.txt (ArithAssign Aop_add) (const_int 1) }
-  | expr MINUSMINUS
-    { lvalue 1 $1.txt (ArithAssign Aop_sub) (const_int 1) }
-  | expr
-    { Pstm_expr $1 }
+    lv = lvalue op = asnop e = rvalue
+    { Pstm_assignop (lv, op, e) }
+  | lvalue EQUAL rvalue
+    { Pstm_assign ($1, $3) }
+  | lvalue PLUSPLUS
+    { Pstm_assignop ($1, Aop_add, const_int 1) }
+  | lvalue MINUSMINUS
+    { Pstm_assignop ($1, Aop_sub, const_int 1) }
+  | rvalue
+    { Pstm_expr ($1) }
   ;
 
 opt_equal_expr:
-    x = option(preceded(EQUAL, expr))
+    x = option(preceded(EQUAL, rvalue))
     { x }
   ;
 
@@ -368,40 +394,40 @@ stmt:
   ;
 
 stmtu:
-    IF inparen_or_fail(expr) stmtm ELSE stmtu
+    IF inparen_or_fail(rvalue) stmtm ELSE stmtu
     { Pstm_ifthenelse ($2, $3, $5) }
-  | IF inparen_or_fail(expr) stmt
+  | IF inparen_or_fail(rvalue) stmt
     { Pstm_ifthenelse ($2, $3, Pstm_empty) }
-  | WHILE inparen_or_fail(expr) stmtu
+  | WHILE inparen_or_fail(rvalue) stmtu
     { Pstm_while ($2, $3) }
   ;
 
 for_loop:
-    FOR LPAREN opt_simple SEMI expr SEMI opt_simple RPAREN stmtm
+    FOR LPAREN opt_simple SEMI rvalue SEMI opt_simple RPAREN stmtm
     { seq $3 (Pstm_while ($5, seq $9 $7)) }
-  | FOR LPAREN tp ident opt_equal_expr SEMI expr SEMI opt_simple RPAREN stmtm
+  | FOR LPAREN tp ident opt_equal_expr SEMI rvalue SEMI opt_simple RPAREN stmtm
     { Pstm_def ($3, $4, $5, Pstm_while ($7, seq $11 $9)) }
   ;
   
 stmtm:
     simple SEMI
     { $1 }
-  | IF inparen_or_fail(expr) stmtm ELSE stmtm
+  | IF inparen_or_fail(rvalue) stmtm ELSE stmtm
     { Pstm_ifthenelse ($2, $3, $5) }
-  | WHILE inparen_or_fail(expr) stmtm
+  | WHILE inparen_or_fail(rvalue) stmtm
     { Pstm_while ($2, $3) }
   | for_loop
     { $1 }
   | RETURN SEMI
     { Pstm_return None }
-  | RETURN expr SEMI
-    { Pstm_return (Some $2) }
+  | RETURN rvalue SEMI
+    { Pstm_return (Some ($2)) }
   | block
     { $1 }
-  | ASSERT inparen_or_fail(expr) semi_or_fail
-    { Pstm_assert $2 }
-  | ERROR inparen_or_fail(expr) semi_or_fail
-    { Pstm_error $2 }
+  | ASSERT inparen_or_fail(rvalue) semi_or_fail
+    { Pstm_assert ($2) }
+  | ERROR inparen_or_fail(rvalue) semi_or_fail
+    { Pstm_error ($2) }
   | BREAK semi_or_fail
     { Pstm_break }
   | CONTINUE semi_or_fail

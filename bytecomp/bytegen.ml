@@ -97,88 +97,91 @@ let comp_primitive = function
   | Porint -> Korint
   | Pxorint -> Kxorint
   | Pnegint -> Knegint
-  | Pload -> Kload
-  | Pstore -> Kstore
   | Pallocarray sz -> Kallocarray sz
   | _ -> failwith "comp_primitive: not implemented"
 
-let rec comp_expr env e sz lexit cont =
-  if sz > !max_stack_used then max_stack_used := sz;
+let rec comp_expr env e cont =
   match e with
   | Lconst cst ->
     Kconst cst :: cont
-  | Lident id ->
-    let pos = find id env in
-    Kaccess (sz - pos) :: cont
-  | Lassign (id, e) ->
-    let pos = find id env in
-    comp_expr env e sz lexit (Kassign (sz - pos) :: cont)
-  | Lifthenelse (e1, e2, e3) ->
-    comp_binary_test env e1 e2 e3 sz lexit cont
+  | Lstackaddr off ->
+    Kaccess off :: cont
+  | Lload e ->
+    comp_expr env e (Kload :: cont)
   | Lprim (p, args) ->
-    comp_args env args sz lexit (comp_primitive p :: cont)
+    comp_args env args (comp_primitive p :: cont)
   | Lcall (f, []) ->
     let lbl = find f env in
     let lbl_cont, cont = label_code cont in
     if is_tailcall cont then
-      Ktailcall (sz, 0, lbl) :: discard_dead_code cont
+      Ktailcall (0, lbl) :: discard_dead_code cont
     else
-      Kpush_retaddr lbl_cont :: Kcall lbl :: cont
+      Kpush_retaddr lbl_cont :: Kcall (0, lbl) :: cont
   | Lcall (f, el) ->
+    let nargs = List.length el in
     let lbl = find f env in
     if is_tailcall cont then
-      comp_args env el sz lexit
-        (Kpush :: Ktailcall (sz, List.length el, lbl) :: discard_dead_code cont)
+      comp_args env el
+        (Kpush :: Ktailcall (nargs, lbl) :: discard_dead_code cont)
     else
       let lbl_cont, cont = label_code cont in
-      Kpush_retaddr lbl_cont :: comp_args env el (sz+1) lexit (Kpush :: Kcall lbl :: cont)
-  | Lloop e ->
-    let lbl = new_label () in
-    Klabel lbl :: comp_expr env e sz lexit (Kbranch lbl :: discard_dead_code cont)
-  | Lblock e ->
-    let lbl, cont = label_code cont in
-    comp_expr env e sz ((sz, lbl) :: lexit) cont
-  | Lexit n ->
-    let szold, lbl = List.nth lexit n in
-    let cont = discard_dead_code cont in
-    add_pop (sz - szold) (branch_to lbl cont)
-  | Lseq (e1, e2) ->
-    comp_expr env e1 sz lexit (comp_expr env e2 sz lexit cont)
-  | Ldef (id, e1, e2) ->
-    comp_expr env e1 sz lexit
-      (Kpush :: comp_expr (add_var id sz env) e2 (sz+1) lexit (add_pop 1 cont))
-  | Lreturn None ->
-    Kreturn sz :: discard_dead_code cont
-  | Lreturn (Some e) ->
-    comp_expr env e sz lexit (Kreturn sz :: discard_dead_code cont)
+      Kpush_retaddr lbl_cont :: comp_args env el (Kpush :: Kcall (nargs, lbl) :: cont)
+  | Lcond (e1, e2, e3) ->
+    comp_cond env e1 e2 e3 cont
+    
+and comp_args env argl cont =
+  comp_expr_list env (List.rev argl) cont
 
-and comp_args env argl sz lexit cont =
-  comp_expr_list env (List.rev argl) sz lexit cont
-
-and comp_expr_list env argl sz lexit cont =
+and comp_expr_list env argl cont =
   match argl with
   | [] -> cont
   | exp :: [] ->
-    comp_expr env exp sz lexit cont
+    comp_expr env exp cont
   | exp :: exps ->
-    comp_expr env exp sz lexit
-      (Kpush :: comp_args env exps (sz+1) lexit cont)
+    comp_expr env exp (Kpush :: comp_args env exps cont)
 
-and comp_binary_test env cond ifso ifnot sz lexit cont =
+and comp_cond env cond ifso ifnot cont =
   (* FIXME - optimise *)
   let lbl_cont, cont = label_code cont in
-  let lbl_ifno, ifno = label_code (comp_expr env ifnot sz lexit cont) in
-  comp_expr env cond sz lexit
-    (Kbranchifnot lbl_ifno :: comp_expr env ifso sz lexit (branch_to lbl_cont ifno))
+  let lbl_ifno, ifno = label_code (comp_expr env ifnot cont) in
+  comp_expr env cond
+    (Kbranchifnot lbl_ifno :: comp_expr env ifso (branch_to lbl_cont ifno))
+
+let rec comp_stmt env s lexit cont =
+  match s with
+  | Lempty ->
+    cont
+  | Lstore (e1, e2) ->
+    comp_expr env e1 (comp_expr env e2 (Kstore :: cont))
+  | Lexpr e ->
+    comp_expr env e cont
+  | Lifthenelse (e1, e2, e3) ->
+    comp_binary_test env e1 e2 e3 lexit cont
+  | Lloop s ->
+    let lbl = new_label () in
+    Klabel lbl :: comp_stmt env s lexit (Kbranch lbl :: discard_dead_code cont)
+  | Lblock s ->
+    let lbl, cont = label_code cont in
+    comp_stmt env s (lbl :: lexit) cont
+  | Lexit n ->
+    branch_to (List.nth lexit n) (discard_dead_code cont)
+  | Lseq (e1, e2) ->
+    comp_stmt env e1 lexit (comp_stmt env e2 lexit cont)
+  | Lreturn None ->
+    Kreturn (-1) (* arity *) :: discard_dead_code cont
+  | Lreturn (Some e) ->
+    comp_expr env e (Kreturn (-1) (* arity *) :: discard_dead_code cont)
+
+and comp_binary_test env cond ifso ifnot lexit cont =
+  (* FIXME - optimise *)
+  let lbl_cont, cont = label_code cont in
+  let lbl_ifno, ifno = label_code (comp_stmt env ifnot lexit cont) in
+  comp_expr env cond
+    (Kbranchifnot lbl_ifno :: comp_stmt env ifso lexit (branch_to lbl_cont ifno))
 
 let comp_function env lbl (Lfun (id, args, body)) cont =
-  let arity = List.length args in
-  let rec positions env pos = function
-    | [] -> env
-    | id :: rem -> IdentMap.add id pos (positions env (pos+1) rem)
-  in
-  let env = positions env 0 args in
-  Klabel lbl :: comp_expr env body arity [] cont
+  (* let arity = args in *)
+  Klabel lbl :: comp_stmt env body [] cont
   
 let compile_program fns =
   label_counter := 0;

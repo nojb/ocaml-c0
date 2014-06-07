@@ -48,8 +48,8 @@ type instruction =
   | Korint
   | Kxorint
   | Knegint
-  | Kcall of label
-  | Ktailcall of int * int * label
+  | Kcall of int * label
+  | Ktailcall of int * label
   | Kallocarray of int
   | Kpush_retaddr of label
   (* | Kintcomp of comparison *)
