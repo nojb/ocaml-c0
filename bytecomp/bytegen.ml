@@ -143,7 +143,7 @@ and comp_expr_list env argl cont =
   | exp :: [] ->
     comp_expr env exp cont
   | exp :: exps ->
-    comp_expr env exp (Kpush :: comp_args env exps cont)
+    comp_expr env exp (Kpush :: comp_expr_list env exps cont)
 
 and comp_cond env cond ifso ifnot cont =
   (* FIXME - optimise *)
