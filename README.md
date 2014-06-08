@@ -1,4 +1,4 @@
-# C0 interpreter and virtual machine
+# C0 bytecode compiler & virtual machine
 
 Welcome to the OCaml/C0 bytecode compiler and virtual machine.  The objective is
 to learn how the OCaml bytecode compiler and interpreter works by writing a similar system for the
@@ -48,7 +48,7 @@ int fact (int acc, int n)
 }  
 ```
 
-We can see the see the three phases of the compiler that are implemented so far
+We can see the three phases of the compiler that are implemented so far
 (parsing, elaboration & translation into bytecode) by running
 ```sh
 ./main.native -dparsetree -dlambda -dinstr file.c0
