@@ -53,5 +53,4 @@ type instruction =
   | Ktailcall of int * int * label
   | Kallocarray of int
   | Kpush_retaddr of label
-  (* | Kintcomp of comparison *)
-  (* | Kstringcomp of comparison *)
+  | Kintcomp of comparison

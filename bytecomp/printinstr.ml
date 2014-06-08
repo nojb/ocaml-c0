@@ -20,11 +20,12 @@
    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. *)
 
 open Format
+open Asttypes
 open Instruct
 
 let instruction ppf = function
   | Klabel lbl -> fprintf ppf "L%i:" lbl
-  | Kconst cst -> fprintf ppf "\tconst %a" Asttypes.print_constant cst
+  | Kconst cst -> fprintf ppf "\tconst %a" print_constant cst
   | Kaccess n -> fprintf ppf "\taccess %i" n
   | Kloadi off -> fprintf ppf "\tloadi %i" off
   | Kstorei off -> fprintf ppf "\tstorei %i" off
@@ -52,6 +53,7 @@ let instruction ppf = function
   | Kcall (nargs, lbl) -> fprintf ppf "\tcall %i, L%i" nargs lbl
   | Kallocarray sz -> fprintf ppf "\tallocarray %i" sz
   | Kpush_retaddr lbl -> fprintf ppf "\tpush_retaddr L%i" lbl
+  | Kintcomp cmp -> fprintf ppf "\tintcomp %S" (string_of_comparison cmp)
                    
 let rec instruction_list ppf = function
   | [] -> ()

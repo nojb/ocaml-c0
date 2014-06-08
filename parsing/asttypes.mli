@@ -29,6 +29,8 @@ type constant =
 type comparison =
   | Ceq | Cneq | Clt | Cgt | Cle | Cge
 
+val string_of_comparison : comparison -> string
+
 type arith_operator =
   | Aop_add | Aop_sub | Aop_mul | Aop_div | Aop_mod
   | Aop_lsl | Aop_asr | Aop_and | Aop_or | Aop_xor

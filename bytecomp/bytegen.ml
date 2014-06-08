@@ -127,6 +127,7 @@ let comp_binop = function
   | Bop_arith Aop_and -> Kandint
   | Bop_arith Aop_or -> Korint
   | Bop_arith Aop_xor -> Kxorint
+  | Bop_cmp cmp -> Kintcomp cmp
   
 let rec comp_expr env e sz cont =
   match e with
